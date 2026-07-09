@@ -1,0 +1,174 @@
+/* ================= WRAPPER ================= */
+.brands-wrapper {
+  background: #f4f7fb;
+}
+
+/* ================= CONTAINER ================= */
+.brands-container {
+  width: 92%;
+  max-width: 1300px;
+  margin: auto;
+  padding: 90px 0;
+}
+
+/* ================= HEADING ================= */
+.brands-heading {
+  font-size: 34px;
+  font-weight: 700;
+  margin-bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brands-heading-bar {
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(180deg, #2563eb, #00c6ff);
+  border-radius: 5px;
+}
+
+/* ================= GRID ================= */
+.brands-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+}
+
+/* ================= CARD ================= */
+.brands-card {
+  position: relative;
+  overflow: hidden;
+
+  background: #ffffff;
+  border-radius: 20px;
+
+  height: 160px;                 /* 🔥 Equal height */
+  padding: 30px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  transition: all 0.35s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+/* ================= LOGO IMAGE ================= */
+.brands-card img {
+  max-width: 75%;                /* 🔥 Controls logo size */
+  max-height: 70px;              /* 🔥 Keeps uniform height */
+
+  object-fit: contain;           /* 🔥 No distortion */
+  display: block;
+
+  transition: transform 0.35s ease;
+}
+
+/* ================= HOVER EFFECT ================= */
+.brands-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+}
+
+.brands-card:hover img {
+  transform: scale(1.08);
+}
+
+/* ================= MODERN GRADIENT BORDER ================= */
+.brands-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 3px;
+
+  background: #008cdb;
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+
+  opacity: 0;
+  transition: 0.35s ease;
+}
+
+.brands-card:hover::before {
+  opacity: 1;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1200px) {
+  .brands-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .brands-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .brands-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brands-heading {
+    font-size: 26px;
+  }
+
+  .brands-card {
+    height: 140px;
+  }
+}
+
+
+/* ========== BRANDS TITLE BAR ============ */
+
+.brands-titlebar{
+  width: 100%;
+  height: 25vh;
+  position: relative;
+}
+
+.brands-titlebar .brands-title-img-cont{
+  background-color: black;
+  width: 100%;
+  height: 100%;
+}
+
+.brands-titlebar .brands-title-img-cont img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.2);
+}
+
+.brands-title-p-cont{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.brands-title-p-cont p{
+  color: white;
+  font-size: 32pt;
+  font-weight: bold;
+  font-family: "Poppins", sans-serif;
+  border-left: 10px solid white;
+  margin: 0;
+  padding: 0px 30px;
+}

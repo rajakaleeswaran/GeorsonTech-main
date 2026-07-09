@@ -1,0 +1,178 @@
+/* WRAPPER */
+.clients-wrapper {
+  background: #f3f6fb;
+}
+
+.clients-container {
+  padding: 90px 0px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* HEADING */
+.clients-heading {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clients-heading-bar {
+  width: 4px;
+  height: 28px;
+  background: #2563eb;
+}
+
+/* GRID */
+.clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 30px;
+}
+/* CARD */
+.clients-card {
+  height: 150px;              
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  overflow: hidden;
+
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+/* IMAGE */
+.clients-card img {
+  display: block;
+  margin: 0 auto;
+  width: 72%;            
+  max-width: 240px;     
+  height: auto;
+  max-height: 110px;    
+  object-fit: contain;
+  transition: transform 0.28s ease, filter 0.28s ease;
+  filter: saturate(1);   
+}
+
+.clients-card:hover img {
+  transform: scale(1.12);
+  filter: saturate(1.03) brightness(1.02);
+}
+
+/* 🟣 CLICK PRESS EFFECT */
+.clients-card:active {
+  transform: scale(0.96);
+}
+
+/* ✨ GLOWING BORDER LAYER */
+.clients-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 3px;
+  background: #008cdb;
+
+  background-size: 300% 300%;
+
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+
+  -webkit-mask-composite: xor;
+
+  mask: 
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+
+  mask-composite: exclude;
+
+  opacity: 0;
+  transition: 0.4s;
+}
+
+/* ✨ SHOW BORDER ON HOVER */
+.clients-card:hover::before {
+  opacity: 1;
+  animation: clientsBorderMove 3s linear infinite;
+}
+
+/* ✨ BORDER ANIMATION */
+@keyframes clientsBorderMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+/* TABLET */
+@media (max-width: 992px) {
+  .clients-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .clients-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .clients-heading {
+    font-size: 26px;
+  }
+}
+
+
+
+/* ========== CLIENTS TITLE BAR ============ */
+
+.clients-titlebar{
+  width: 100%;
+  height: 25vh;
+  position: relative;
+}
+
+.clients-titlebar .clients-title-img-cont{
+  background-color: black;
+  width: 100%;
+  height: 100%;
+}
+
+.clients-titlebar .clients-title-img-cont img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.2);
+}
+
+.clients-title-p-cont{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.clients-title-p-cont p{
+  color: white;
+  font-size: 32pt;
+  font-weight: bold;
+  font-family: "Poppins", sans-serif;
+  border-left: 10px solid white;
+  margin: 0;
+  padding: 0px 30px;
+}

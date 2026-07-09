@@ -1,0 +1,220 @@
+/* ======================================================
+   GEORSON TECH – Global Design System
+   ====================================================== */
+
+/* ─── Google Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── CSS Custom Properties ─── */
+:root {
+  /* Brand Colors */
+  --clr-primary:       #0077cc;
+  --clr-primary-dark:  #005fa3;
+  --clr-primary-light: #33aaff;
+  --clr-accent:        #00c6ff;
+  --clr-secondary:     #ff6b35;
+
+  /* Neutrals */
+  --clr-black:         #0a0a0a;
+  --clr-dark:          #111827;
+  --clr-gray-900:      #1f2937;
+  --clr-gray-800:      #374151;
+  --clr-gray-600:      #4b5563;
+  --clr-gray-400:      #9ca3af;
+  --clr-gray-200:      #e5e7eb;
+  --clr-gray-100:      #f3f4f6;
+  --clr-white:         #ffffff;
+
+  /* Gradients */
+  --gradient-primary:  linear-gradient(135deg, #0077cc 0%, #00c6ff 100%);
+  --gradient-dark:     linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  --gradient-hero:     linear-gradient(to right, rgba(0,0,0,0.75), rgba(0,0,0,0.25), rgba(0,0,0,0.75));
+
+  /* Shadows */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.12);
+  --shadow-lg:   0 10px 40px rgba(0,0,0,0.15);
+  --shadow-xl:   0 20px 60px rgba(0,0,0,0.20);
+  --shadow-glow: 0 0 30px rgba(0,119,204,0.3);
+
+  /* Typography */
+  --font-body:    'Inter', 'Poppins', sans-serif;
+  --font-heading: 'Outfit', 'Poppins', sans-serif;
+
+  /* Spacing */
+  --section-padding: 90px 20px;
+  --section-padding-sm: 60px 20px;
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 30px;
+
+  /* Transitions */
+  --transition: all 0.3s ease;
+  --transition-slow: all 0.5s ease;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Global Reset ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--clr-white);
+  color: var(--clr-gray-800);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* ─── Utility Classes ─── */
+.section-label {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--clr-primary);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 700;
+  color: var(--clr-dark);
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+
+.section-title span {
+  color: var(--clr-primary);
+}
+
+.section-subtitle {
+  font-size: 16px;
+  color: var(--clr-gray-600);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gradient-primary);
+  color: var(--clr-white);
+  padding: 13px 30px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: var(--transition);
+  border: 2px solid transparent;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--clr-primary);
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: var(--transition);
+  border: 2px solid var(--clr-primary);
+}
+
+.btn-outline:hover {
+  background: var(--clr-primary);
+  color: var(--clr-white);
+  transform: translateY(-2px);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.text-center { text-align: center; }
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--clr-gray-100); }
+::-webkit-scrollbar-thumb {
+  background: var(--clr-primary);
+  border-radius: 3px;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: var(--clr-primary);
+  color: var(--clr-white);
+}
