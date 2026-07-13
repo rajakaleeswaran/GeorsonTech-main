@@ -16,7 +16,7 @@ const FALLBACK_LOCATIONS = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 9840780897",
     secondary_phone: "+91 7845692697",
-    email: "georsontech@gmail.com",
+    email: "covai@georsontechgmail.com",
     google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456790"
   },
   {
@@ -25,7 +25,7 @@ const FALLBACK_LOCATIONS = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 9840780897",
     secondary_phone: "+91 7845692697",
-    email: "service@georsontech.com",
+    email: "covai@georsontechgmail.com",
     google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456791"
   }
 ];
