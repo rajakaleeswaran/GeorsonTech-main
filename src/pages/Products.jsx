@@ -117,7 +117,7 @@ function Products() {
                   if (typeof product.specifications === 'string') {
                     try {
                       specItems = JSON.parse(product.specifications);
-                    } catch (e) {
+                    } catch {
                       specItems = product.specifications.split(',');
                     }
                   } else if (Array.isArray(product.specifications)) {
@@ -271,7 +271,7 @@ function Products() {
               {/* Actions */}
               <div style={{ display: 'flex', gap: '15px' }}>
                 <Link 
-                  to={`/enquiry/contact?product=${encodeURIComponent(selectedProduct.name)}`}
+                  to={`/enquiry?tab=enquiry&product=${encodeURIComponent(selectedProduct.name)}`}
                   className="btn-primary" 
                   style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}
                   onClick={() => setSelectedProduct(null)}

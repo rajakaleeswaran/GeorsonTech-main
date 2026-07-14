@@ -23,7 +23,7 @@ export const getClients = async (req, res) => {
 
 // Admin CRUD endpoints
 export const createClient = async (req, res) => {
-  const { name, sort_order, status } = req.body;
+  const { name, sort_order, status, category } = req.body;
   const logo_path = req.file ? req.file.path.replace(/\\/g, '/') : null;
 
   if (!name) {
@@ -35,9 +35,9 @@ export const createClient = async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      `INSERT INTO clients (name, logo_path, sort_order, status) 
-       VALUES (?, ?, ?, ?)`,
-      [name, logo_path, parseInt(sort_order || 0), status || 'Publish']
+      `INSERT INTO clients (name, logo_path, sort_order, status, category) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [name, logo_path, parseInt(sort_order || 0), status || 'Publish', category || 'Client']
     );
 
     return res.status(201).json({ message: 'Client created successfully', clientId: result.insertId });
@@ -49,7 +49,7 @@ export const createClient = async (req, res) => {
 
 export const updateClient = async (req, res) => {
   const { id } = req.params;
-  const { name, sort_order, status } = req.body;
+  const { name, sort_order, status, category } = req.body;
 
   try {
     const [clients] = await pool.query('SELECT * FROM clients WHERE id = ?', [id]);
@@ -62,9 +62,9 @@ export const updateClient = async (req, res) => {
 
     await pool.query(
       `UPDATE clients 
-       SET name = ?, logo_path = ?, sort_order = ?, status = ? 
+       SET name = ?, logo_path = ?, sort_order = ?, status = ?, category = ? 
        WHERE id = ?`,
-      [name, logo_path, parseInt(sort_order || 0), status || 'Publish', id]
+      [name, logo_path, parseInt(sort_order || 0), status || 'Publish', category || current.category || 'Client', id]
     );
 
     return res.json({ message: 'Client updated successfully' });

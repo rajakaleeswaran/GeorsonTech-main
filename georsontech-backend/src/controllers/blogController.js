@@ -68,7 +68,7 @@ export const getBlogCategories = async (req, res) => {
 // Admin CRUD Endpoints
 export const createBlog = async (req, res) => {
   const { category_id, title, slug, excerpt, content, status, seo_title, meta_description, seo_keywords } = req.body;
-  const featured_image = req.file ? req.file.path : null;
+  const featured_image = req.file ? req.file.path.replace(/\\/g, '/') : null;
   const author_id = req.user.id; // From authenticateToken middleware
 
   if (!title || !slug || !content) {
@@ -100,7 +100,7 @@ export const updateBlog = async (req, res) => {
     }
 
     const current = blogs[0];
-    const featured_image = req.file ? req.file.path : current.featured_image;
+    const featured_image = req.file ? req.file.path.replace(/\\/g, '/') : current.featured_image;
 
     await pool.query(
       `UPDATE blogs 

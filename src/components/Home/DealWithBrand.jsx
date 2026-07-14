@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import "../../styles/Home.css";
 
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -6,14 +7,28 @@ import "swiper/css";
 
 import brandBg from "../../assets/Home/goalinnumImg.png";
 
-/* ✅ AUTO IMPORT ALL BRAND IMAGES */
+/* ✅ AUTO IMPORT ALL BRAND IMAGES (as fallback) */
 const images = import.meta.glob("../../assets/Brands/*.{png,jpg,jpeg}", {
   eager: true,
 });
 
-const brands = Object.values(images).map((img) => img.default);
+const FALLBACK_BRANDS = Object.values(images).map((img) => img.default);
 
 function DealWithBrand() {
+  const [dbBrands, setDbBrands] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/clients')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const filtered = data.filter(c => c.status === 'Publish' && c.category === 'Brand');
+          setDbBrands(filtered);
+        }
+      })
+      .catch(err => console.error("Failed to load slider brands:", err));
+  }, []);
+
   return (
     <section
       className="brand-section"
@@ -48,13 +63,23 @@ function DealWithBrand() {
               },
             }}
           >
-            {brands.map((logo, index) => (
-              <SwiperSlide key={index}>
-                <div className="brand-card">
-                  <img src={logo} alt={`brand-${index}`} />
-                </div>
-              </SwiperSlide>
-            ))}
+            {dbBrands.length > 0 ? (
+              dbBrands.map((b, index) => (
+                <SwiperSlide key={b.id || index}>
+                  <div className="brand-card">
+                    <img src={`http://localhost:5000/${b.logo_path}`} alt={b.name} />
+                  </div>
+                </SwiperSlide>
+              ))
+            ) : (
+              FALLBACK_BRANDS.map((logo, index) => (
+                <SwiperSlide key={index}>
+                  <div className="brand-card">
+                    <img src={logo} alt={`brand-${index}`} />
+                  </div>
+                </SwiperSlide>
+              ))
+            )}
           </Swiper>
         </div>
       </div>

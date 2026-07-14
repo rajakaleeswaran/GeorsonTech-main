@@ -13,12 +13,12 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export const sendEnquiryEmail = async (enquiryData) => {
+export const sendEnquiryEmail = async (enquiryData, recipients) => {
   const { name, company, email, phone, subject, serviceInterested, message } = enquiryData;
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || 'projects@georsontech.com',
-    to: process.env.EMAIL_TO || 'projects@georsontech.com',
+    to: (Array.isArray(recipients) && recipients.length > 0) ? recipients.join(', ') : (process.env.EMAIL_TO || 'projects@georsontech.com'),
     subject: `New Business Enquiry: ${subject}`,
     html: `
       <h2>New Business Enquiry Received</h2>
@@ -37,12 +37,12 @@ export const sendEnquiryEmail = async (enquiryData) => {
   return transporter.sendMail(mailOptions);
 };
 
-export const sendCareerEmail = async (candidateData, fileAttachment) => {
+export const sendCareerEmail = async (candidateData, fileAttachment, hrRecipient) => {
   const { name, email, phone, qualification, experience, coverLetter } = candidateData;
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || 'projects@georsontech.com',
-    to: process.env.HR_EMAIL_TO || 'hr@georsontech.com',
+    to: hrRecipient || process.env.HR_EMAIL_TO || 'hr@georsontech.com',
     subject: `New Job Application from ${name}`,
     html: `
       <h2>New Career Application Received</h2>

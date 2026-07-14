@@ -45,8 +45,8 @@ export const getProductCategories = async (req, res) => {
 // Admin CRUD endpoints
 export const createProduct = async (req, res) => {
   const { category_id, name, slug, description, specifications, video_url, is_featured } = req.body;
-  const image_path = req.files && req.files['image'] ? req.files['image'][0].path : null;
-  const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path : null;
+  const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : null;
+  const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : null;
 
   if (!name || !slug) {
     return res.status(400).json({ message: 'Name and slug are required' });
@@ -77,8 +77,8 @@ export const updateProduct = async (req, res) => {
     }
 
     const current = products[0];
-    const image_path = req.files && req.files['image'] ? req.files['image'][0].path : current.image_path;
-    const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path : current.pdf_brochure_path;
+    const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : current.image_path;
+    const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : current.pdf_brochure_path;
 
     await pool.query(
       `UPDATE products 
