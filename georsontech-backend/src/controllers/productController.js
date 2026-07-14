@@ -106,3 +106,52 @@ export const deleteProduct = async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete product' });
   }
 };
+
+export const createProductCategory = async (req, res) => {
+  const { name, slug } = req.body;
+  if (!name || !slug) {
+    return res.status(400).json({ message: 'Name and slug are required' });
+  }
+  try {
+    const [result] = await pool.query('INSERT INTO product_categories (name, slug) VALUES (?, ?)', [name, slug]);
+    return res.status(201).json({ message: 'Product category created successfully', categoryId: result.insertId });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to create product category' });
+  }
+};
+
+export const updateProductCategory = async (req, res) => {
+  const { id } = req.params;
+  const { name, slug } = req.body;
+  try {
+    const [result] = await pool.query('UPDATE product_categories SET name = ?, slug = ? WHERE id = ?', [name, slug, id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Product category not found' });
+    }
+    return res.json({ message: 'Product category updated successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to update product category' });
+  }
+};
+
+export const deleteProductCategory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Check if category is used
+    const [products] = await pool.query('SELECT id FROM products WHERE category_id = ?', [id]);
+    if (products.length > 0) {
+      return res.status(400).json({ message: 'Cannot delete product category that is currently in use' });
+    }
+
+    const [result] = await pool.query('DELETE FROM product_categories WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Product category not found' });
+    }
+    return res.json({ message: 'Product category deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to delete product category' });
+  }
+};

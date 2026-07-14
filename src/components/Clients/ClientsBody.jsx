@@ -1,33 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaQuoteLeft, FaStar, FaBuilding, FaIndustry, FaCogs, FaTint, FaBolt, FaCar } from 'react-icons/fa';
 import "../../styles/Clients.css";
-
-import ABB from "../../assets/Clients/ABB.png";
-import AIRTRONIC from "../../assets/Clients/AIRTRONIC.jpeg";
-import BARGA from "../../assets/Clients/BARGA.jpeg";
-import CHAKR from "../../assets/Clients/CHAKR.png";
-import DRMILTON from "../../assets/Clients/DRMILTON.jpeg";
-import GILBARCO from "../../assets/Clients/GILBARCO.png";
-import LECS from "../../assets/Clients/LECS.jpg";
-import MARCUS from "../../assets/Clients/MARCUS.jpeg";
-import NORBAR from "../../assets/Clients/NORBAR.png";
-import RADIANT from "../../assets/Clients/RADIANT.png";
-import RAMCO from "../../assets/Clients/RAMCO.jpeg";
 import TitleBar from "../TitleBar";
 import ClientsTitleImg from "../../assets/Clients/titleImg.png";
 
-const clientsList = [
-  { img: ABB, name: "ABB" },
-  { img: AIRTRONIC, name: "AIRTRONIC" },
-  { img: BARGA, name: "BARGA" },
-  { img: CHAKR, name: "CHAKR" },
-  { img: DRMILTON, name: "DRMILTON" },
-  { img: GILBARCO, name: "GILBARCO" },
-  { img: LECS, name: "LECS" },
-  { img: MARCUS, name: "MARCUS" },
-  { img: NORBAR, name: "NORBAR" },
-  { img: RADIANT, name: "RADIANT" },
-  { img: RAMCO, name: "RAMCO" },
+const FALLBACK_CLIENTS = [
+  { id: 1, name: "ABB", logo_path: "uploads/images/ABB.png" },
+  { id: 2, name: "AIRTRONIC", logo_path: "uploads/images/AIRTRONIC.jpeg" },
+  { id: 3, name: "BARGA", logo_path: "uploads/images/BARGA.jpeg" },
+  { id: 4, name: "CHAKR", logo_path: "uploads/images/CHAKR.png" },
+  { id: 5, name: "DRMILTON", logo_path: "uploads/images/DRMILTON.jpeg" },
+  { id: 6, name: "GILBARCO", logo_path: "uploads/images/GILBARCO.png" },
+  { id: 7, name: "LECS", logo_path: "uploads/images/LECS.jpg" },
+  { id: 8, name: "MARCUS", logo_path: "uploads/images/MARCUS.jpeg" },
+  { id: 9, name: "NORBAR", logo_path: "uploads/images/NORBAR.png" },
+  { id: 10, name: "RADIANT", logo_path: "uploads/images/RADIANT.png" },
+  { id: 11, name: "RAMCO", logo_path: "uploads/images/RAMCO.jpeg" }
 ];
 
 const INDUSTRIES = [
@@ -60,6 +48,19 @@ const TESTIMONIALS = [
 ];
 
 function ClientsBody() {
+  const [clients, setClients] = useState(FALLBACK_CLIENTS);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/clients')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setClients(data);
+        }
+      })
+      .catch(err => console.error("Failed to load clients list from API:", err));
+  }, []);
+
   return (
     <div className="clients-wrapper">
       <TitleBar title="CLIENTS" bg={ClientsTitleImg}/>
@@ -68,20 +69,38 @@ function ClientsBody() {
         
         {/* Section 1: Logo Grid */}
         <div style={{ marginBottom: '90px' }}>
-          <div className="clients-heading" style={{ justifyContent: 'center', marginBottom: '40px' }}>
+          <div className="clients-heading" style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
             <div className="clients-heading-bar"></div>
             <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
               Our Prestigious Clients
             </h2>
           </div>
-          <div className="clients-grid">
-            {clientsList.map((client, index) => (
+          <div className="clients-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '20px' }}>
+            {clients.map((client, index) => (
               <div
                 className="clients-card"
-                key={index}
-                data-aos="fade-up"
+                key={client.id || index}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  height: '100px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '15px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                }}
               >
-                <img src={client.img} alt={client.name} />
+                <img 
+                  src={`http://localhost:5000/${client.logo_path}`} 
+                  alt={client.name} 
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -89,7 +108,7 @@ function ClientsBody() {
 
         {/* Section 2: Industries Served */}
         <div style={{ marginBottom: '90px', padding: '0 20px' }}>
-          <div className="clients-heading" style={{ justifyContent: 'center', marginBottom: '40px' }}>
+          <div className="clients-heading" style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
             <div className="clients-heading-bar"></div>
             <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
               Industries We Serve
@@ -122,7 +141,7 @@ function ClientsBody() {
               >
                 <div style={{
                   fontSize: '32px',
-                  color: '#2563eb',
+                  color: '#0093DD',
                   marginBottom: '16px',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -146,8 +165,8 @@ function ClientsBody() {
         </div>
 
         {/* Section 3: Testimonials */}
-        <div style={{ padding: '0 20px' }}>
-          <div className="clients-heading" style={{ justifyContent: 'center', marginBottom: '40px' }}>
+        <div style={{ padding: '0 20px', marginBottom: '40px' }}>
+          <div className="clients-heading" style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
             <div className="clients-heading-bar"></div>
             <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
               Client Testimonials

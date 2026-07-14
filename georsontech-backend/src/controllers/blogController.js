@@ -128,3 +128,52 @@ export const deleteBlog = async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete blog post' });
   }
 };
+
+export const createBlogCategory = async (req, res) => {
+  const { name, slug } = req.body;
+  if (!name || !slug) {
+    return res.status(400).json({ message: 'Name and slug are required' });
+  }
+  try {
+    const [result] = await pool.query('INSERT INTO blog_categories (name, slug) VALUES (?, ?)', [name, slug]);
+    return res.status(201).json({ message: 'Blog category created successfully', categoryId: result.insertId });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to create blog category' });
+  }
+};
+
+export const updateBlogCategory = async (req, res) => {
+  const { id } = req.params;
+  const { name, slug } = req.body;
+  try {
+    const [result] = await pool.query('UPDATE blog_categories SET name = ?, slug = ? WHERE id = ?', [name, slug, id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Blog category not found' });
+    }
+    return res.json({ message: 'Blog category updated successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to update blog category' });
+  }
+};
+
+export const deleteBlogCategory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Check if category is used
+    const [blogs] = await pool.query('SELECT id FROM blogs WHERE category_id = ?', [id]);
+    if (blogs.length > 0) {
+      return res.status(400).json({ message: 'Cannot delete blog category that is currently in use' });
+    }
+
+    const [result] = await pool.query('DELETE FROM blog_categories WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Blog category not found' });
+    }
+    return res.json({ message: 'Blog category deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to delete blog category' });
+  }
+};

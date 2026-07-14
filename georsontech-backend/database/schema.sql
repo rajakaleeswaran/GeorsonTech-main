@@ -103,9 +103,13 @@ CREATE TABLE IF NOT EXISTS services (
   category_id INT,
   title VARCHAR(200) NOT NULL,
   slug VARCHAR(200) NOT NULL UNIQUE,
-  description TEXT,
+  short_description TEXT,
+  detailed_description TEXT,
+  features TEXT,
   image_path VARCHAR(255),
   pdf_brochure_path VARCHAR(255),
+  sort_order INT DEFAULT 0,
+  status ENUM('Draft', 'Publish') DEFAULT 'Publish',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES service_categories(id) ON DELETE SET NULL
@@ -153,6 +157,7 @@ CREATE TABLE IF NOT EXISTS clients (
   name VARCHAR(150) NOT NULL,
   logo_path VARCHAR(255) NOT NULL,
   sort_order INT DEFAULT 0,
+  status ENUM('Draft', 'Publish') DEFAULT 'Publish',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -325,3 +330,67 @@ CREATE TABLE IF NOT EXISTS user_refresh_tokens (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- ============================================================
+-- SEED DATA & ADDITIONAL TABLES
+-- ============================================================
+
+-- 22. Industries
+CREATE TABLE IF NOT EXISTS industries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  detailed_description TEXT,
+  image_path VARCHAR(255),
+  sort_order INT DEFAULT 0,
+  status ENUM('Draft', 'Publish') DEFAULT 'Publish',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Seed default super admin user (password is admin123)
+INSERT INTO users (role_id, username, email, password) VALUES
+(1, 'admin', 'admin@georsontech.com', '$2a$10$xgpoYT0E2zaG.TsshFba/u3tw0owXlvYrZYrwB2hTFRUoWef1SMNS')
+ON DUPLICATE KEY UPDATE username=VALUES(username);
+
+-- Seed initial services
+INSERT INTO services (title, slug, short_description, detailed_description, features, sort_order, status) VALUES
+('Industrial Engineering', 'industrial-engineering', 'Complete industrial engineering solutions from design to implementation, covering electrical and mechanical systems.', 'Our Industrial Engineering team provides comprehensive services for the design, implementation, and optimization of complex industrial plants. We specialize in system integration, site piping, cabling, and structural layouts tailored for high efficiency and compliance.', 'Site Electrification,Cable Tray & Glandings,Piping & Structural works,Plant Commissioning Support', 10, 'Publish'),
+('Industrial Automation', 'industrial-automation', 'PLC, SCADA, DCS, and HMI-based automation systems for manufacturing and process industries.', 'We provide turnkey automation systems designed using market-leading PLC, SCADA, and HMI platforms. From process loop control to discrete manufacturing sequences, our systems improve precision, throughput, and safety.', 'Siemens & Allen-Bradley PLCs,SCADA/HMI screen development,DCS Systems Integration,Machine Safety Audits', 20, 'Publish'),
+('IoT Solutions', 'iiot-solutions', 'Smart connected systems that enable real-time monitoring, predictive maintenance, and data-driven decisions.', 'Leverage the power of Industry 4.0. Our IoT solutions connect shop floor sensors and legacy machines to edge gateways and cloud analytics platforms, providing real-time dashboards and predictive alerts.', 'Edge Gateway setup,OPC-UA/MQTT protocol mapping,Cloud Dashboard development,Predictive Analytics', 30, 'Publish'),
+('Electrical Panels', 'electrical-panels', 'LT/HT electrical panels, MCC, PCC, power distribution boards, and custom switchgear fabrication.', 'Georson Tech designs and manufactures high-quality LT panels, Motor Control Centres (MCC), and Power Control Centres (PCC). Our panels are fully load-tested, rated up to IP54, and optimized for industrial safety.', 'MCC and PCC Panels,Power Distribution Boards,Custom Busbar Fabrication,Load Testing & Certifications', 40, 'Publish'),
+('Manufacturing Solutions', 'manufacturing-solutions', 'End-to-end manufacturing execution systems and production line automation for Industry 4.0.', 'We offer bespoke manufacturing solutions including custom jigs, fixtures, ESD workstations, and modular material transfer trolleys, facilitating lean production environments.', 'ESD Safe Workbenches,Isolation Breaker Trolleys,Jigs and Assembly Fixtures,Material Handling Stools', 50, 'Publish'),
+('Engineering Consultancy', 'engineering-consultancy', 'Expert technical consultancy for plant layout, system design, energy audits, and compliance.', 'Our certified engineering consultants assist you with plant planning, energy efficiency audits, harmonic filtering designs, and safety compliance according to international standards.', 'Energy Audits & Reporting,Harmonic Analysis & Mitigation,Process Safety Consulting,Plant Layout & CAD Drafting', 60, 'Publish')
+ON DUPLICATE KEY UPDATE title=VALUES(title);
+
+-- Seed initial clients
+INSERT INTO clients (name, logo_path, sort_order, status) VALUES
+('ABB', 'uploads/images/ABB.png', 10, 'Publish'),
+('AIRTRONIC', 'uploads/images/AIRTRONIC.jpeg', 20, 'Publish'),
+('BARGA', 'uploads/images/BARGA.jpeg', 30, 'Publish'),
+('CHAKR', 'uploads/images/CHAKR.png', 40, 'Publish'),
+('DRMILTON', 'uploads/images/DRMILTON.jpeg', 50, 'Publish'),
+('GILBARCO', 'uploads/images/GILBARCO.png', 60, 'Publish'),
+('LECS', 'uploads/images/LECS.jpg', 70, 'Publish'),
+('MARCUS', 'uploads/images/MARCUS.jpeg', 80, 'Publish'),
+('NORBAR', 'uploads/images/NORBAR.png', 90, 'Publish'),
+('RADIANT', 'uploads/images/RADIANT.png', 100, 'Publish'),
+('RAMCO', 'uploads/images/RAMCO.jpeg', 110, 'Publish')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
+-- Seed initial 11 industries
+INSERT INTO industries (name, slug, description, detailed_description, sort_order, status) VALUES
+('Electrical Engineering Industries', 'electrical-engineering-industries', 'Advanced PCC/MCC panels, energy management, and cabling layouts.', 'We provide comprehensive design and deployment of power distribution grids, high-power control panels, and custom site routing for major electrical engineering companies.', 10, 'Publish'),
+('Coal and Material Handling Industries', 'coal-and-material-handling-industries', 'Heavy conveyors, automated chute control, and material flow tracking.', 'We automate stackers, reclaimers, long-distance conveyor belts, and silo discharge systems, integrating safety interlocks and SCADA metrics to maximize bulk material flow.', 20, 'Publish'),
+('Marine Industries', 'marine-industries', 'Seawater piping systems, vessel automation, and corrosion-resistant panel designs.', 'Custom controls and electrical components certified for harsh marine atmospheres. We provide vessel engine telemetry, thruster control integration, and offshore safety monitoring.', 30, 'Publish'),
+('Automobile Industries', 'automobile-industries', 'Assembly line jigs, weld cell integration, and automated guided vehicles (AGV).', 'We partner with leading automakers to build robotic assembly interfaces, custom testing panels, component transport equipment, and ESD workstations.', 40, 'Publish'),
+('Tyre Industries', 'tyre-industries', 'Curing press automation, mixer temperature controls, and sorting logic.', 'Precise process loop controls for tyre manufacturing lines, integrating temperature scanners, hydraulic pump sequences, and automatic barcode scanning for quality tracking.', 50, 'Publish'),
+('Cement Industries', 'cement-industries', 'Raw mill controls, rotary kiln thermal mapping, and packer automation.', 'Our heavy industry solutions cover automated limestone dosing, high-torque motor variable frequency drive setups, and bagging line automation.', 60, 'Publish'),
+('Pharmaceutical Industries', 'pharmaceutical-industries', 'Batch production reporting, FDA 21 CFR Part 11 compliance, and cleanroom HVAC automation.', 'We implement high-accuracy recipe management software, sterile dosing systems, cleanroom airflow PID control loops, and batch validation reporting tools.', 70, 'Publish'),
+('Food and Beverage Industries', 'food-and-beverage-industries', 'Automated filling lines, bottling SCADA, and clean-in-place (CIP) system logic.', 'Hygienic controls for ingredient weighing, high-speed bottling control networks, thermal pasteurization safety instrumentation, and CIP cleaning sequences.', 80, 'Publish'),
+('Tool Industries', 'tool-industries', 'CNC machine tool loading, jig calibrations, and tool changer automation.', 'Providing custom electrical panel systems for machine builders, multi-axis motion controls, servo motor fine-tuning, and operator safety panels.', 90, 'Publish'),
+('Electronics and Assembly Industries', 'electronics-and-assembly-industries', 'Precision picking, ESD protection systems, and high-speed inspection loops.', 'ESD-safe layouts, sensor integration for tiny components, automated vision test integration, and component handling machines for PCB board lines.', 100, 'Publish'),
+('Solar and Renewable Energy Industries', 'solar-and-renewable-energy-industries', 'PV inverter tracking controls, battery energy storage systems, and solar SCADA portals.', 'Automated tracking array algorithms, telemetry solutions for remote solar fields, utility grid connection synchronizers, and energy dashboards.', 110, 'Publish')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+

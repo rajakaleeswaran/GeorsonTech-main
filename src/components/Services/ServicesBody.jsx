@@ -1,143 +1,181 @@
-import { useState } from "react"; 
+import React, { useState, useEffect } from "react"; 
+import { FaCheckCircle, FaFilePdf, FaEnvelope, FaSearch, FaArrowRight } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import "../../styles/Services.css";
 
-// BRAND PRODUCTS
-import abb1 from "../../assets/Services/BRANDS_PRODUCTS/ABB-001.png";
-import abb2 from "../../assets/Services/BRANDS_PRODUCTS/ABB-002.jpg";
-import almonard1 from "../../assets/Services/BRANDS_PRODUCTS/ALMONARD-001.jpg";
-import almonard2 from "../../assets/Services/BRANDS_PRODUCTS/ALMONARD-002.png";
-import bajaj from "../../assets/Services/BRANDS_PRODUCTS/BAJAJ-001.jpg";
-import brother1 from "../../assets/Services/BRANDS_PRODUCTS/BROTHER-001.webp";
-import brother2 from "../../assets/Services/BRANDS_PRODUCTS/BROTHER-002.jpeg";
-import cs1 from "../../assets/Services/BRANDS_PRODUCTS/C&S-001.jpg";
-import cs2 from "../../assets/Services/BRANDS_PRODUCTS/C&S-002.webp";
-import comet from "../../assets/Services/BRANDS_PRODUCTS/COMET.png";
-import connectwell from "../../assets/Services/BRANDS_PRODUCTS/CONNECTWELL.png";
-import diamond from "../../assets/Services/BRANDS_PRODUCTS/DIAMOND.jpg";
-import dlink from "../../assets/Services/BRANDS_PRODUCTS/DLINK.jpg";
-import eaton from "../../assets/Services/BRANDS_PRODUCTS/EATON.png";
-import elmeasure from "../../assets/Services/BRANDS_PRODUCTS/ELMEASURE.jpg";
-import festo from "../../assets/Services/BRANDS_PRODUCTS/FESTO.jpeg";
-import fluke from "../../assets/Services/BRANDS_PRODUCTS/FLUKE.jpg.webp";
-import harting from "../../assets/Services/BRANDS_PRODUCTS/HARTING.webp";
-import henseI from "../../assets/Services/BRANDS_PRODUCTS/HENSEL.jpeg";
-import legrand from "../../assets/Services/BRANDS_PRODUCTS/LEGRAND.jpg";
-import lapp from "../../assets/Services/BRANDS_PRODUCTS/LAPP.jpg";
-import omron1 from "../../assets/Services/BRANDS_PRODUCTS/OMRON-001.jpg";
-import omron2 from "../../assets/Services/BRANDS_PRODUCTS/OMRON-002.webp";
-
-// OWN PRODUCTS
-import containerStool1 from "../../assets/Services/OWN_PRODUCTS/CONTAINER STOOL 1.jpeg";
-import containerStool2 from "../../assets/Services/OWN_PRODUCTS/CONTAINER STOOL 2.jpeg";
-import esdTable from "../../assets/Services/OWN_PRODUCTS/ESD TABLE & FLOOR.jpg";
-import heightAdjustWorkstation from "../../assets/Services/OWN_PRODUCTS/HEIGHT ADJUST WORKSTATION.jpg";
-import isolationBreaker from "../../assets/Services/OWN_PRODUCTS/ISOLATION BREAKER TROLLEY.JPG";
-import ltPanel from "../../assets/Services/OWN_PRODUCTS/LT PANEL 1.JPEG";
-import lvPanel from "../../assets/Services/OWN_PRODUCTS/LV PANEL 2.jpg";
-import modularTapoff from "../../assets/Services/OWN_PRODUCTS/MODULAR TAPOFF PANEL.JPG";
-import safetyBarricade from "../../assets/Services/OWN_PRODUCTS/Safety barricade.jpeg";
-import testingPanel from "../../assets/Services/OWN_PRODUCTS/TESTING PANEL.JPEG";
-
-const brandProducts = [
-  { img: abb1, title: "ABB Products" },
-  { img: abb2, title: "ABB Electrical Systems" },
-  { img: almonard1, title: "Almonard Industrial Fans" },
-  { img: almonard2, title: "Almonard Ventilation Systems" },
-  { img: bajaj, title: "Bajaj Electrical Products" },
-  { img: brother1, title: "Brother Industrial Machines" },
-  { img: brother2, title: "Brother Automation Systems" },
-  { img: cs1, title: "C&S Switchgear" },
-  { img: cs2, title: "C&S Electrical Components" },
-  { img: comet, title: "Comet Industrial Equipment" },
-  { img: connectwell, title: "Connectwell Terminal Blocks" },
-  { img: diamond, title: "Diamond Electrical Products" },
-  { img: dlink, title: "D-Link Networking Solutions" },
-  { img: eaton, title: "Eaton Power Management" },
-  { img: elmeasure, title: "Elmeasure Energy Meters" },
-  { img: festo, title: "Festo Automation Components" },
-  { img: fluke, title: "Fluke Test Instruments" },
-  { img: harting, title: "Harting Connectivity Solutions" },
-  { img: henseI, title: "Hensel Electrical Enclosures" },
-  { img: legrand, title: "Legrand Electrical Systems" },
-  { img: lapp, title: "LAPP Industrial Cables" },
-  { img: omron1, title: "Omron Industrial Automation" },
-  { img: omron2, title: "Omron Sensors & Controllers" }
-];
-
-const ownProducts = [
-  { img: containerStool1, title: "Container Stool" },
-  { img: containerStool2, title: "Container Stool Variant" },
-  { img: esdTable, title: "ESD Table & Flooring System" },
-  { img: heightAdjustWorkstation, title: "Height Adjustable Workstation" },
-  { img: isolationBreaker, title: "Isolation Breaker Trolley" },
-  { img: ltPanel, title: "LT Electrical Panel" },
-  { img: lvPanel, title: "LV Electrical Panel" },
-  { img: modularTapoff, title: "Modular Tapoff Panel" },
-  { img: safetyBarricade, title: "Industrial Safety Barricade" },
-  { img: testingPanel, title: "Electrical Testing Panel" }
-];
-
- 
 function ServicesBody() {
+  const [services, setServices] = useState([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // 🔍 FILTER LOGIC
-  const filteredBrand = brandProducts.filter((service) =>
-    service.title.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    fetch('http://localhost:5000/api/services')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setServices(data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch services:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Filter based on search query
+  const filteredServices = services.filter((svc) =>
+    svc.title.toLowerCase().includes(search.toLowerCase()) ||
+    (svc.short_description && svc.short_description.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const filteredOwn = ownProducts.filter((service) =>
-    service.title.toLowerCase().includes(search.toLowerCase())
-  );
   return (
-    <div className="services-wrapper">
-      <div className="services-container">
+    <div className="services-wrapper" style={{ padding: '60px 20px', background: '#FAFADA' }}>
+      <div className="services-container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
-        {/* 🔍 SEARCH */}
-        <div className="services-search">
-          <input
-            type="text"
-            placeholder="Search products or services (e.g. ABB, Panel)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        {/* Search Filter */}
+        <div className="services-search" style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '500px' }}>
+            <input
+              type="text"
+              placeholder="Search engineering & automation services..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 20px 12px 45px',
+                borderRadius: '30px',
+                border: '1px solid #cbd5e1',
+                fontSize: '14.5px',
+                outline: 'none',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+              }}
+            />
+            <FaSearch style={{ position: 'absolute', left: '18px', top: '16px', color: '#94a3b8' }} />
+          </div>
         </div>
 
-        {/* ===== BRAND PRODUCTS ===== */}
-        <h2 className="services-section-title">Brand Products</h2>
+        {loading ? (
+          <p className="text-center" style={{ color: '#64748b' }}>Loading services...</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
+            {filteredServices.length > 0 ? (
+              filteredServices.map((svc) => {
+                // Parse features list
+                let featureItems = [];
+                if (svc.features) {
+                  if (svc.features.startsWith('[') && svc.features.endsWith(']')) {
+                    try {
+                      featureItems = JSON.parse(svc.features);
+                    } catch (e) {
+                      featureItems = svc.features.split(',');
+                    }
+                  } else {
+                    featureItems = svc.features.split(',');
+                  }
+                }
 
-        <div className="services-grid">
-          {filteredBrand.length > 0 ? (
-            filteredBrand.map((service, index) => (
-              <div className="services-card" key={index}>
-                <div className="services-image-box">
-                  <img src={service.img} alt={service.title} />
-                </div>
-                <h3 className="services-title">{service.title}</h3>
+                return (
+                  <div 
+                    className="services-card" 
+                    key={svc.id}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,147,221,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
+                    }}
+                  >
+                    {/* Service Image */}
+                    <div style={{ height: '200px', width: '100%', overflow: 'hidden', background: '#e2e8f0' }}>
+                      <img 
+                        src={svc.image_path ? `http://localhost:5000/${svc.image_path}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=600'} 
+                        alt={svc.title} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+
+                    {/* Card Content */}
+                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <h3 style={{ fontSize: '19px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
+                        {svc.title}
+                      </h3>
+                      <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, marginBottom: '20px' }}>
+                        {svc.short_description || svc.description}
+                      </p>
+
+                      {/* Features Checkbox list */}
+                      {featureItems.length > 0 && (
+                        <div style={{ marginBottom: '24px' }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                            Key Competencies:
+                          </h4>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {featureItems.map((item, idx) => (
+                              <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                                <FaCheckCircle style={{ color: '#0093DD', flexShrink: 0 }} /> {item.trim()}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', pt: '10px' }}>
+                        <Link 
+                          to={`/enquiry/contact?service=${encodeURIComponent(svc.title)}`}
+                          className="btn-primary" 
+                          style={{
+                            padding: '10px 16px',
+                            fontSize: '12.5px',
+                            flex: 1,
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          Enquire <FaEnvelope />
+                        </Link>
+                        {svc.pdf_brochure_path && (
+                          <a 
+                            href={`http://localhost:5000/${svc.pdf_brochure_path}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="btn-outline"
+                            style={{
+                              padding: '8px 16px',
+                              fontSize: '12.5px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderColor: '#e2e8f0',
+                              color: '#64748b'
+                            }}
+                            title="Download Brochure"
+                          >
+                            <FaFilePdf /> PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 0' }}>
+                <p style={{ color: '#64748b' }}>No matching services found.</p>
               </div>
-            ))
-          ) : (
-            <p className="no-result">No matching brand products</p>
-          )}
-        </div>
-
-        {/* ===== OUR PRODUCTS ===== */}
-        <h2 className="services-section-title">Our Products</h2>
-
-        <div className="services-grid">
-          {filteredOwn.length > 0 ? (
-            filteredOwn.map((service, index) => (
-              <div className="services-card" key={index}>
-                <div className="services-image-box">
-                  <img src={service.img} alt={service.title} />
-                </div>
-                <h3 className="services-title">{service.title}</h3>
-              </div>
-            ))
-          ) : (
-            <p className="no-result">No matching products</p>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
       </div>
     </div>

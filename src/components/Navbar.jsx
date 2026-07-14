@@ -19,9 +19,10 @@ function Navbar() {
 
   const navLinks = [
     { to: "/",          label: "HOME" },
-    { to: "/about",     label: "ABOUT" },
+    { to: "/about",     label: "ABOUT US" },
     { to: "/services",  label: "SERVICES" },
     { to: "/products",  label: "PRODUCTS" },
+    { to: "/industries",label: "INDUSTRIES" },
     { to: "/clients",   label: "CLIENTS" },
     { to: "/blog",      label: "BLOG" },
     { to: "/enquiry",   label: "ENQUIRY" },
@@ -29,7 +30,6 @@ function Navbar() {
 
   return (
     <header className={`navbar-container ${scrolled ? "scrolled" : ""}`}>
-
       {/* Logo */}
       <div className="navbar-left">
         <div className="navbar-logo-wrapper">
@@ -62,9 +62,6 @@ function Navbar() {
             {label}
           </NavLink>
         ))}
-        {/* <NavLink to="/enquiry" onClick={closeMenu} className="nav-cta-btn">
-          Get Quote
-        </NavLink> */}
       </nav>
 
       {/* Overlay for mobile */}

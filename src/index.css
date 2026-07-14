@@ -8,11 +8,11 @@
 /* ─── CSS Custom Properties ─── */
 :root {
   /* Brand Colors */
-  --clr-primary:       #0077cc;
-  --clr-primary-dark:  #005fa3;
-  --clr-primary-light: #33aaff;
-  --clr-accent:        #00c6ff;
-  --clr-secondary:     #ff6b35;
+  --clr-primary:       #0093DD;
+  --clr-primary-dark:  #0076B3;
+  --clr-primary-light: #44BAFF;
+  --clr-accent:        #00C6FF;
+  --clr-secondary:     #FF6B35;
 
   /* Neutrals */
   --clr-black:         #0a0a0a;
