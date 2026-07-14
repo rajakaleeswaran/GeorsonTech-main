@@ -1,107 +1,62 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { FaSearch, FaFilePdf, FaInfoCircle } from 'react-icons/fa';
+import { FaSearch, FaFilePdf, FaInfoCircle, FaTimes, FaEnvelope } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import '../styles/Products.css';
 
-// Product data (will be replaced by API in Phase 2)
-import prod1 from '../assets/Home/Hero/hero1.png';
-import prod2 from '../assets/Home/Hero/hero2.png';
-import prod3 from '../assets/Home/Hero/hero3.png';
-
-const CATEGORIES = ["All", "Electrical Panels", "Automation", "IIoT", "Sensors", "Drives & Motors"];
-
-const PRODUCTS = [
-  {
-    id: 1, category: "Electrical Panels",
-    name: "MCC – Motor Control Centre",
-    description: "Fully enclosed motor control centre with overload relays, contactors, and bus bar assembly. Suitable for industrial plants.",
-    specs: ["IP54 Rating", "Up to 6600V", "Custom Design"],
-    image: prod1,
-  },
-  {
-    id: 2, category: "Electrical Panels",
-    name: "PCC – Power Control Centre",
-    description: "Power control centre panels for distribution and protection of electrical power in heavy industries.",
-    specs: ["LT/HT", "Up to 4000A", "Metering"],
-    image: prod2,
-  },
-  {
-    id: 3, category: "Automation",
-    name: "PLC Control Systems",
-    description: "Programmable Logic Controller systems from Siemens, Allen-Bradley, and Mitsubishi for factory automation.",
-    specs: ["SIEMENS S7", "Allen-Bradley", "Remote I/O"],
-    image: prod3,
-  },
-  {
-    id: 4, category: "Automation",
-    name: "SCADA Integration",
-    description: "Supervisory Control and Data Acquisition system integration for real-time plant monitoring and control.",
-    specs: ["Wonderware", "FactoryTalk", "AVEVA"],
-    image: prod1,
-  },
-  {
-    id: 5, category: "IIoT",
-    name: "IIoT Edge Gateways",
-    description: "Industrial IoT edge gateways for connecting legacy machines to cloud platforms for data analytics.",
-    specs: ["OPC-UA", "MQTT", "Cloud Ready"],
-    image: prod2,
-  },
-  {
-    id: 6, category: "IIoT",
-    name: "Condition Monitoring System",
-    description: "Wireless vibration and temperature sensors for predictive maintenance and equipment health monitoring.",
-    specs: ["Wireless", "Battery Powered", "5-Year Life"],
-    image: prod3,
-  },
-  {
-    id: 7, category: "Sensors",
-    name: "Industrial Sensors Pack",
-    description: "Proximity, photoelectric, ultrasonic, and temperature sensors for automation and process control.",
-    specs: ["IP67", "NPN/PNP", "Multi-Range"],
-    image: prod1,
-  },
-  {
-    id: 8, category: "Drives & Motors",
-    name: "Variable Frequency Drives",
-    description: "VFD / AC drives for precise motor speed control, energy savings, and soft start applications.",
-    specs: ["0.37kW–315kW", "Danfoss", "ABB"],
-    image: prod2,
-  },
-  {
-    id: 9, category: "Drives & Motors",
-    name: "Servo Drives & Motors",
-    description: "High-precision servo drive and motor systems for CNC, robotics, and motion control applications.",
-    specs: ["0.5Nm–500Nm", "Encoder Feedback", "EtherCAT"],
-    image: prod3,
-  },
-];
-
 function Products() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  useEffect(() => {
+    // Fetch Categories
+    fetch('http://localhost:5000/api/products/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategories(["All", ...data.map(cat => cat.name)]);
+        }
+      })
+      .catch(err => console.error("Failed to fetch product categories:", err));
+
+    // Fetch Products
+    fetch('http://localhost:5000/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch products:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter(p => {
-      const matchCat = activeCategory === "All" || p.category === activeCategory;
+    return products.filter(p => {
+      const matchCat = activeCategory === "All" || p.category_name === activeCategory;
       const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
+                          (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchCat && matchSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, products]);
 
   return (
     <>
       <Helmet>
-        <title>Products – Georson Tech Pvt. Ltd | Industrial Engineering Products</title>
+        <title>Products – Georson Tech Pvt. Ltd | Industrial Product Catalog</title>
         <meta name="description" content="Browse Georson Tech's industrial product catalog – electrical panels, PLC systems, IIoT gateways, VFDs, servo drives, and more." />
         <link rel="canonical" href="https://www.georsontech.com/products" />
       </Helmet>
 
       <TitleBar title="PRODUCTS" bg={ServicesTitleImg} />
 
-      <div className="products-page" style={{ padding: '70px 20px' }}>
+      <div className="products-page" style={{ padding: '70px 20px', background: '#FAFAFA' }}>
 
         {/* Page Header */}
         <div className="text-center" style={{ marginBottom: '50px' }}>
@@ -126,12 +81,23 @@ function Products() {
         </div>
 
         {/* Category Filter */}
-        <div className="products-filter-bar">
-          {CATEGORIES.map(cat => (
+        <div className="products-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginBottom: '40px' }}>
+          {categories.map(cat => (
             <button
               key={cat}
               className={`products-filter-btn ${activeCategory === cat ? 'active' : ''}`}
               onClick={() => setActiveCategory(cat)}
+              style={{
+                padding: '8px 20px',
+                borderRadius: '20px',
+                border: '1px solid #0093DD',
+                background: activeCategory === cat ? '#0093DD' : 'transparent',
+                color: activeCategory === cat ? '#ffffff' : '#0093DD',
+                fontWeight: '600',
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
             >
               {cat}
             </button>
@@ -140,40 +106,194 @@ function Products() {
 
         {/* Products Grid */}
         <div className="container">
-          <div className="products-grid">
-            {filtered.length > 0 ? filtered.map(product => (
-              <div key={product.id} className="product-card">
-                <div className="product-card-img">
-                  <img src={product.image} alt={product.name} loading="lazy" />
-                  <span className="product-card-badge">{product.category}</span>
-                </div>
-                <div className="product-card-body">
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-                  <div className="product-card-specs">
-                    {product.specs.map((spec, i) => (
-                      <span key={i} className="product-spec-tag">{spec}</span>
-                    ))}
+          {loading ? (
+            <p className="text-center" style={{ color: '#64748b' }}>Loading products catalog...</p>
+          ) : (
+            <div className="products-grid">
+              {filtered.length > 0 ? filtered.map(product => {
+                // Parse specs
+                let specItems = [];
+                if (product.specifications) {
+                  if (typeof product.specifications === 'string') {
+                    try {
+                      specItems = JSON.parse(product.specifications);
+                    } catch (e) {
+                      specItems = product.specifications.split(',');
+                    }
+                  } else if (Array.isArray(product.specifications)) {
+                    specItems = product.specifications;
+                  }
+                }
+
+                return (
+                  <div key={product.id} className="product-card">
+                    <div className="product-card-img" style={{ position: 'relative', height: '220px', background: '#e2e8f0', overflow: 'hidden' }}>
+                      <img 
+                        src={product.image_path ? `http://localhost:5000/${product.image_path}` : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400'} 
+                        alt={product.name} 
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <span className="product-card-badge" style={{ position: 'absolute', top: '12px', left: '12px', background: '#0093DD', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                        {product.category_name || "General"}
+                      </span>
+                    </div>
+                    <div className="product-card-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: 'calc(100% - 220px)' }}>
+                      <h3 style={{ fontSize: '17.5px', fontWeight: '700', color: '#0f172a', margin: '0 0 10px' }}>{product.name}</h3>
+                      <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, marginBottom: '15px', flex: 1 }}>{product.description}</p>
+                      
+                      {specItems.length > 0 && (
+                        <div className="product-card-specs" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
+                          {specItems.map((spec, i) => (
+                            <span key={i} className="product-spec-tag" style={{ background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '4px', fontSize: '11.5px' }}>{spec.trim()}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="product-card-actions" style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                        <button 
+                          className="product-btn-details" 
+                          onClick={() => setSelectedProduct(product)}
+                          style={{ flex: 1, padding: '10px', fontSize: '13px', background: '#0093DD', color: '#fff', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          <FaInfoCircle /> Details
+                        </button>
+                        {product.pdf_brochure_path && (
+                          <a 
+                            href={`http://localhost:5000/${product.pdf_brochure_path}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="product-btn-pdf" 
+                            title="Download Brochure"
+                            style={{ padding: '10px 14px', fontSize: '13px', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <FaFilePdf />
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="product-card-actions">
-                    <button className="product-btn-details">
-                      <FaInfoCircle /> View Details
-                    </button>
-                    <button className="product-btn-pdf" title="Download Brochure">
-                      <FaFilePdf /> PDF
-                    </button>
-                  </div>
+                );
+              }) : (
+                <div className="products-no-results" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 0' }}>
+                  <p style={{ color: '#64748b' }}>😕 No products found. Try adjusting your search or filter.</p>
                 </div>
-              </div>
-            )) : (
-              <div className="products-no-results">
-                <p>😕 No products found. Try adjusting your search or filter.</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
       </div>
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '650px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            position: 'relative'
+          }}>
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedProduct(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: '#f1f5f9',
+                border: 'none',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10
+              }}
+            >
+              <FaTimes style={{ color: '#64748b' }} />
+            </button>
+
+            {/* Modal Image */}
+            <div style={{ height: '260px', width: '100%', background: '#e2e8f0' }}>
+              <img 
+                src={selectedProduct.image_path ? `http://localhost:5000/${selectedProduct.image_path}` : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
+                alt={selectedProduct.name} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '30px' }}>
+              <span className="product-card-badge" style={{ background: '#0093DD', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                {selectedProduct.category_name || "General"}
+              </span>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginTop: '10px', marginBottom: '14px' }}>
+                {selectedProduct.name}
+              </h2>
+              
+              <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: 1.6, marginBottom: '24px' }}>
+                {selectedProduct.description}
+              </p>
+
+              {/* Technical Specifications */}
+              {selectedProduct.specifications && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
+                    Technical Specifications:
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {(typeof selectedProduct.specifications === 'string' ? selectedProduct.specifications.split(',') : selectedProduct.specifications).map((spec, i) => (
+                      <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px' }}>
+                        {spec.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <Link 
+                  to={`/enquiry/contact?product=${encodeURIComponent(selectedProduct.name)}`}
+                  className="btn-primary" 
+                  style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  onClick={() => setSelectedProduct(null)}
+                >
+                  <FaEnvelope /> Request Callback
+                </Link>
+                {selectedProduct.pdf_brochure_path && (
+                  <a 
+                    href={`http://localhost:5000/${selectedProduct.pdf_brochure_path}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn-outline"
+                    style={{ borderColor: '#ef4444', color: '#ef4444', padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FaFilePdf /> Download Brochure
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

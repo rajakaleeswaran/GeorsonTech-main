@@ -130,21 +130,27 @@ function Enquiry() {
 
     setSubmitting(true);
     try {
-      // Phase 2 will link this to the Express backend / MySQL.
-      // For Phase 1 we simulate successful submission.
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setSubmitted(true);
-      toast.success('Your business enquiry has been submitted successfully!');
-      // Reset Form
-      setEnquiryForm({
-        name: '',
-        company: '',
-        email: '',
-        phone: '',
-        subject: '',
-        serviceInterested: '',
-        message: ''
+      const response = await fetch("http://localhost:5000/api/enquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(enquiryForm)
       });
+      const data = await response.json();
+      if (response.ok) {
+        setSubmitted(true);
+        toast.success('Your business enquiry has been submitted successfully!');
+        setEnquiryForm({
+          name: '',
+          company: '',
+          email: '',
+          phone: '',
+          subject: '',
+          serviceInterested: '',
+          message: ''
+        });
+      } else {
+        toast.error(data.message || 'Failed to submit enquiry.');
+      }
     } catch (error) {
       toast.error('Failed to submit enquiry. Please try again later.');
     } finally {
@@ -164,21 +170,36 @@ function Enquiry() {
 
     setSubmitting(true);
     try {
-      // Phase 2 will handle FormData and upload the file to Express/Multer
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setSubmitted(true);
-      toast.success('Your job application has been submitted successfully!');
-      // Reset Form
-      setCareerForm({
-        name: '',
-        email: '',
-        phone: '',
-        qualification: '',
-        experience: '',
-        coverLetter: ''
+      const formData = new FormData();
+      formData.append('name', careerForm.name);
+      formData.append('email', careerForm.email);
+      formData.append('phone', careerForm.phone);
+      formData.append('qualification', careerForm.qualification);
+      formData.append('experience', careerForm.experience);
+      formData.append('coverLetter', careerForm.coverLetter);
+      formData.append('resume', resume);
+
+      const response = await fetch("http://localhost:5000/api/career", {
+        method: "POST",
+        body: formData
       });
-      setResume(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      const data = await response.json();
+      if (response.ok) {
+        setSubmitted(true);
+        toast.success('Your job application has been submitted successfully!');
+        setCareerForm({
+          name: '',
+          email: '',
+          phone: '',
+          qualification: '',
+          experience: '',
+          coverLetter: ''
+        });
+        setResume(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        toast.error(data.message || 'Failed to submit application.');
+      }
     } catch (error) {
       toast.error('Failed to submit application. Please try again.');
     } finally {

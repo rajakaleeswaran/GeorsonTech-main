@@ -10,8 +10,12 @@ import pool from './config/db.js';
 // Route controller imports
 import { login, refreshToken, logout } from './controllers/authController.js';
 import { createEnquiry, createCareerApplication, getEnquiries, getCareerApplications, updateEnquiryStatus, updateCareerStatus } from './controllers/enquiryController.js';
-import { getProducts, getProductCategories, createProduct, updateProduct, deleteProduct } from './controllers/productController.js';
-import { getBlogs, getBlogBySlug, getBlogCategories, createBlog, updateBlog, deleteBlog } from './controllers/blogController.js';
+import { getProducts, getProductCategories, createProduct, updateProduct, deleteProduct, createProductCategory, updateProductCategory, deleteProductCategory } from './controllers/productController.js';
+import { getBlogs, getBlogBySlug, getBlogCategories, createBlog, updateBlog, deleteBlog, createBlogCategory, updateBlogCategory, deleteBlogCategory } from './controllers/blogController.js';
+import { getServices, getServiceBySlug, createService, updateService, deleteService } from './controllers/serviceController.js';
+import { getIndustries, getIndustryBySlug, createIndustry, updateIndustry, deleteIndustry } from './controllers/industryController.js';
+import { getClients, createClient, updateClient, deleteClient } from './controllers/clientController.js';
+import { getSolutions, getSolutionBySlug, getSolutionCategories, createSolution, updateSolution, deleteSolution, createSolutionCategory, updateSolutionCategory, deleteSolutionCategory } from './controllers/solutionController.js';
 import { getSettings, updateSettings } from './controllers/settingsController.js';
 import { getLocations, createLocation, updateLocation, deleteLocation } from './controllers/locationController.js';
 import { getMedia, uploadMedia, deleteMedia } from './controllers/mediaController.js';
@@ -88,6 +92,16 @@ app.get('/api/search', globalSearch);
 // 8. Visitor Logs
 app.post('/api/visitor/track', trackVisitor);
 
+// 9. Public Services, Industries & Clients
+app.get('/api/services', getServices);
+app.get('/api/services/:slug', getServiceBySlug);
+app.get('/api/industries', getIndustries);
+app.get('/api/industries/:slug', getIndustryBySlug);
+app.get('/api/clients', getClients);
+app.get('/api/solutions', getSolutions);
+app.get('/api/solutions/categories', getSolutionCategories);
+app.get('/api/solutions/:slug', getSolutionBySlug);
+
 
 // ─── ADMIN PROTECTED ROUTES ───
 const adminRouter = express.Router();
@@ -99,7 +113,12 @@ adminRouter.get('/dashboard', async (req, res) => {
     const [[enquiriesCount]] = await pool.query('SELECT COUNT(*) as count FROM enquiries');
     const [[careersCount]] = await pool.query('SELECT COUNT(*) as count FROM career_applications');
     const [[productsCount]] = await pool.query('SELECT COUNT(*) as count FROM products');
+    const [[categoriesCount]] = await pool.query('SELECT COUNT(*) as count FROM product_categories');
     const [[blogsCount]] = await pool.query('SELECT COUNT(*) as count FROM blogs');
+    const [[servicesCount]] = await pool.query('SELECT COUNT(*) as count FROM services');
+    const [[industriesCount]] = await pool.query('SELECT COUNT(*) as count FROM industries');
+    const [[clientsCount]] = await pool.query('SELECT COUNT(*) as count FROM clients');
+    const [[solutionsCount]] = await pool.query('SELECT COUNT(*) as count FROM solutions');
     const [[visitorsCount]] = await pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs');
     const [[todayVisitorsCount]] = await pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs WHERE DATE(created_at) = CURDATE()');
     
@@ -112,7 +131,12 @@ adminRouter.get('/dashboard', async (req, res) => {
         enquiries: enquiriesCount.count,
         applications: careersCount.count,
         products: productsCount.count,
+        categories: categoriesCount.count,
         blogs: blogsCount.count,
+        services: servicesCount.count,
+        industries: industriesCount.count,
+        clients: clientsCount.count,
+        solutions: solutionsCount.count,
         totalVisitors: visitorsCount.count,
         todayVisitors: todayVisitorsCount.count
       },
@@ -145,10 +169,46 @@ adminRouter.post('/products', authorizeRoles('Super Admin', 'Website Admin'), up
 adminRouter.put('/products/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateProduct);
 adminRouter.delete('/products/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteProduct);
 
+// Admin CRUD Product Categories
+adminRouter.post('/products/categories', authorizeRoles('Super Admin', 'Website Admin'), createProductCategory);
+adminRouter.put('/products/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), updateProductCategory);
+adminRouter.delete('/products/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteProductCategory);
+
 // Admin CRUD Blog articles
 adminRouter.post('/blogs', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), upload.single('featured_image'), createBlog);
 adminRouter.put('/blogs/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), upload.single('featured_image'), updateBlog);
 adminRouter.delete('/blogs/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), deleteBlog);
+
+// Admin CRUD Blog Categories
+adminRouter.post('/blogs/categories', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), createBlogCategory);
+adminRouter.put('/blogs/categories/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), updateBlogCategory);
+adminRouter.delete('/blogs/categories/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), deleteBlogCategory);
+
+// Admin CRUD Services
+adminRouter.get('/services', authorizeRoles('Super Admin', 'Website Admin'), getServices);
+adminRouter.post('/services', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), createService);
+adminRouter.put('/services/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateService);
+adminRouter.delete('/services/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteService);
+
+// Admin CRUD Industries
+adminRouter.get('/industries', authorizeRoles('Super Admin', 'Website Admin'), getIndustries);
+adminRouter.post('/industries', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), createIndustry);
+adminRouter.put('/industries/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), updateIndustry);
+adminRouter.delete('/industries/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteIndustry);
+
+// Admin CRUD Clients
+adminRouter.get('/clients', authorizeRoles('Super Admin', 'Website Admin'), getClients);
+adminRouter.post('/clients', authorizeRoles('Super Admin', 'Website Admin'), upload.single('logo'), createClient);
+adminRouter.put('/clients/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('logo'), updateClient);
+adminRouter.delete('/clients/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteClient);
+
+// Admin CRUD Solutions & Categories
+adminRouter.post('/solutions', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), createSolution);
+adminRouter.put('/solutions/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), updateSolution);
+adminRouter.delete('/solutions/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteSolution);
+adminRouter.post('/solutions/categories', authorizeRoles('Super Admin', 'Website Admin'), createSolutionCategory);
+adminRouter.put('/solutions/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), updateSolutionCategory);
+adminRouter.delete('/solutions/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteSolutionCategory);
 
 // Admin Media Library
 adminRouter.get('/media', getMedia);

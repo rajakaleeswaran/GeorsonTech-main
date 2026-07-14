@@ -1,82 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
-import { FaCalendarAlt, FaClock, FaUser, FaArrowLeft, FaLinkedinIn, FaTwitter, FaFacebookF } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaUser, FaArrowLeft, FaLinkedinIn, FaFacebookF, FaEnvelope } from 'react-icons/fa';
 import '../styles/Blog.css';
-
-// Placeholder images
-import blogImg1 from '../assets/Home/Hero/hero1.png';
-import blogImg2 from '../assets/Home/Hero/hero2.png';
-import blogImg3 from '../assets/Home/Hero/hero3.png';
-
-const BLOG_POSTS = {
-  "understanding-plc-scada-integration": {
-    title: "Understanding PLC-SCADA Integration for Modern Manufacturing",
-    category: "Industrial Automation",
-    author: "Georson Tech Engineering Team",
-    date: "June 15, 2025",
-    readTime: "5 min read",
-    image: blogImg1,
-    metaDesc: "Learn how PLC and SCADA integration enables real-time control and monitoring in manufacturing.",
-    content: [
-      {
-        type: "intro",
-        text: "In modern manufacturing, the integration of Programmable Logic Controllers (PLC) and Supervisory Control and Data Acquisition (SCADA) systems forms the backbone of industrial automation. This combination enables real-time monitoring, control, and data analysis across complex production environments.",
-      },
-      {
-        type: "h2", text: "What is a PLC?",
-      },
-      {
-        type: "p",
-        text: "A Programmable Logic Controller (PLC) is a ruggedized digital computer used to control manufacturing processes. Unlike traditional relay logic, PLCs are reprogrammable and can handle multiple inputs and outputs. They execute control logic continuously in real time, making split-second decisions based on sensor inputs.",
-      },
-      {
-        type: "h2", text: "What is SCADA?",
-      },
-      {
-        type: "p",
-        text: "SCADA (Supervisory Control and Data Acquisition) is a software system that provides a graphical interface for operators to monitor and control industrial processes. SCADA collects data from PLCs, RTUs, and other field devices and presents it in a meaningful dashboard format.",
-      },
-      {
-        type: "h2", text: "Benefits of PLC-SCADA Integration",
-      },
-      {
-        type: "list",
-        items: [
-          "Real-time process monitoring and alarming",
-          "Historical data logging for trend analysis",
-          "Remote monitoring and control capability",
-          "Improved operational efficiency and uptime",
-          "Faster fault detection and troubleshooting",
-          "Compliance with industrial standards (ISA-95, IEC 61131)",
-        ],
-      },
-      {
-        type: "h2", text: "Implementation at Georson Tech",
-      },
-      {
-        type: "p",
-        text: "At Georson Tech, we have successfully implemented PLC-SCADA integrated systems for various industries including cement, pharmaceuticals, food processing, and water treatment. Our team brings expertise in Siemens SIMATIC, Allen-Bradley ControlLogix, Wonderware, and FactoryTalk platforms.",
-      },
-    ],
-  },
-};
-
-const RELATED = [
-  { slug: "iiot-predictive-maintenance", title: "IIoT Predictive Maintenance", image: blogImg2, date: "May 28, 2025" },
-  { slug: "industry-4-digital-transformation", title: "Industry 4.0 Digital Transformation", image: blogImg3, date: "April 22, 2025" },
-];
 
 function BlogPost() {
   const { slug } = useParams();
-  const post = BLOG_POSTS[slug];
+  const [post, setPost] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    // Fetch individual post details
+    fetch(`http://localhost:5000/api/blogs/${slug}`)
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error("Article not found");
+      })
+      .then(data => {
+        setPost(data);
+        
+        // Fetch related posts (same category, excluding this one)
+        fetch('http://localhost:5000/api/blogs')
+          .then(res => res.json())
+          .then(allBlogs => {
+            if (Array.isArray(allBlogs)) {
+              const matches = allBlogs.filter(b => b.slug !== slug && b.category_name === data.category_name);
+              setRelated(matches.slice(0, 2));
+            }
+          })
+          .catch(() => {});
+      })
+      .catch(err => {
+        console.error(err);
+        setPost(null);
+      })
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString(undefined, options);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '100px 20px', textAlign: 'center' }}>
+        <p style={{ color: '#64748b' }}>Loading article details...</p>
+      </div>
+    );
+  }
 
   if (!post) {
     return (
       <div style={{ padding: '100px 20px', textAlign: 'center' }}>
         <h2>Article not found</h2>
         <p style={{ marginTop: '16px', color: '#6b7280' }}>The article you're looking for doesn't exist.</p>
-        <Link to="/blog" style={{ color: '#0077cc', marginTop: '20px', display: 'inline-block' }}>← Back to Blog</Link>
+        <Link to="/blog" style={{ color: '#0093DD', marginTop: '20px', display: 'inline-block', fontWeight: 'bold' }}>← Back to Blog</Link>
       </div>
     );
   }
@@ -85,90 +67,108 @@ function BlogPost() {
     <>
       <Helmet>
         <title>{post.title} – Georson Tech Blog</title>
-        <meta name="description" content={post.metaDesc} />
+        <meta name="description" content={post.excerpt || post.title} />
         <meta property="og:title" content={post.title} />
-        <meta property="og:description" content={post.metaDesc} />
-        <meta property="og:image" content={post.image} />
+        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:image" content={post.featured_image ? `http://localhost:5000/${post.featured_image}` : ''} />
         <link rel="canonical" href={`https://www.georsontech.com/blog/${slug}`} />
       </Helmet>
 
-      <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
+      <div style={{ background: '#f8fafc', minHeight: '100vh', padding: '40px 0' }}>
         <div className="blog-post-layout">
 
           {/* Article */}
-          <article className="blog-post">
-            <Link to="/blog" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#0077cc', fontWeight: 600, marginBottom: '24px', fontSize: '14px' }}>
+          <article className="blog-post" style={{ background: '#fff', padding: '30px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+            <Link to="/blog" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#0093DD', fontWeight: 600, marginBottom: '24px', fontSize: '14.5px' }}>
               <FaArrowLeft /> Back to Blog
             </Link>
 
-            <div className="blog-post-hero">
-              <img src={post.image} alt={post.title} />
+            <div className="blog-post-hero" style={{ height: '360px', width: '100%', overflow: 'hidden', borderRadius: '8px', marginBottom: '20px' }}>
+              <img 
+                src={post.featured_image ? `http://localhost:5000/${post.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=805'} 
+                alt={post.title} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
 
-            <p className="blog-post-category">{post.category}</p>
-            <h1>{post.title}</h1>
+            <span className="blog-post-category" style={{ fontSize: '11px', color: '#0093DD', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+              {post.category_name}
+            </span>
+            <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 16px' }}>{post.title}</h1>
 
-            <div className="blog-post-meta">
-              <span><FaUser /> {post.author}</span>
-              <span><FaCalendarAlt /> {post.date}</span>
-              <span><FaClock /> {post.readTime}</span>
+            <div className="blog-post-meta" style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#64748b', marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+              <span><FaUser /> {post.author_name || "Admin"}</span>
+              <span><FaCalendarAlt /> {formatDate(post.created_at)}</span>
             </div>
 
-            <div className="blog-post-content">
-              {post.content.map((block, i) => {
-                if (block.type === 'intro') return <p key={i} style={{ fontSize: '17px', color: '#374151', marginBottom: '28px', fontWeight: 500 }}>{block.text}</p>;
-                if (block.type === 'h2') return <h2 key={i}>{block.text}</h2>;
-                if (block.type === 'p') return <p key={i}>{block.text}</p>;
-                if (block.type === 'list') return (
-                  <ul key={i}>
-                    {block.items.map((item, j) => <li key={j}>{item}</li>)}
-                  </ul>
-                );
-                return null;
-              })}
-            </div>
+            {/* Rich HTML Content */}
+            <div 
+              className="blog-post-content" 
+              dangerouslySetInnerHTML={{ __html: post.content }}
+              style={{ fontSize: '15px', color: '#334155', lineHeight: 1.7, marginBottom: '40px' }}
+            />
 
-            {/* Share */}
-            <div className="blog-post-tags">
-              <strong style={{ marginRight: '10px', fontSize: '14px' }}>Share:</strong>
-              <a href="#" style={{ background: '#0077b5', color: '#fff', padding: '7px 14px', borderRadius: '5px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            {/* Share Section */}
+            <div className="blog-post-tags" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '14px', color: '#334155' }}>Share:</strong>
+              <a 
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ background: '#0077b5', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
                 <FaLinkedinIn /> LinkedIn
               </a>
-              <a href="#" style={{ background: '#1da1f2', color: '#fff', padding: '7px 14px', borderRadius: '5px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <FaTwitter /> Twitter
-              </a>
-              <a href="#" style={{ background: '#1877f2', color: '#fff', padding: '7px 14px', borderRadius: '5px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <a 
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ background: '#1877f2', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
                 <FaFacebookF /> Facebook
               </a>
+              <a 
+                href={`mailto:?subject=${encodeURIComponent(post.title)}&body=${encodeURIComponent(window.location.href)}`}
+                style={{ background: '#64748b', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FaEnvelope /> Email
+              </a>
             </div>
-
           </article>
 
           {/* Sidebar */}
           <aside className="blog-sidebar">
-            <div className="sidebar-widget">
-              <h4 className="sidebar-widget-title">Related Articles</h4>
-              {RELATED.map((rel, i) => (
-                <div key={i} className="sidebar-recent-post">
-                  <div className="sidebar-recent-img">
-                    <img src={rel.image} alt={rel.title} loading="lazy" />
+            {related.length > 0 && (
+              <div className="sidebar-widget">
+                <h4 className="sidebar-widget-title">Related Articles</h4>
+                {related.map((rel, i) => (
+                  <div key={rel.id || i} className="sidebar-recent-post" style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>
+                    <div className="sidebar-recent-img" style={{ width: '60px', height: '60px', borderRadius: '4px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+                      <img 
+                        src={rel.featured_image ? `http://localhost:5000/${rel.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=100'} 
+                        alt={rel.title} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                    <div className="sidebar-recent-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <Link to={`/blog/${rel.slug}`} style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', lineHeight: 1.3 }}>
+                        {rel.title}
+                      </Link>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}><FaCalendarAlt /> {formatDate(rel.created_at)}</span>
+                    </div>
                   </div>
-                  <div className="sidebar-recent-info">
-                    <Link to={`/blog/${rel.slug}`}>{rel.title}</Link>
-                    <p className="sidebar-recent-date"><FaCalendarAlt /> {rel.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            <div className="sidebar-widget" style={{ background: 'linear-gradient(135deg, #0077cc, #00c6ff)', color: '#fff', border: 'none' }}>
-              <h4 style={{ color: '#fff', marginBottom: '16px', fontSize: '17px', fontFamily: 'Outfit, sans-serif', fontWeight: 700 }}>
+            <div className="sidebar-widget" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: '#fff', border: 'none', borderRadius: '12px', padding: '24px' }}>
+              <h4 style={{ color: '#fff', marginBottom: '12px', fontSize: '17px', fontFamily: 'Outfit, sans-serif', fontWeight: 700 }}>
                 Need Engineering Solutions?
               </h4>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)', marginBottom: '20px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.8)', marginBottom: '20px', lineHeight: 1.6 }}>
                 Get in touch with our expert team for industrial automation, IIoT, and electrical engineering projects.
               </p>
-              <Link to="/enquiry" style={{ background: '#fff', color: '#0077cc', padding: '11px 22px', borderRadius: '6px', fontWeight: 700, fontSize: '14px', display: 'inline-block' }}>
+              <Link to="/enquiry/contact" className="btn-primary" style={{ background: '#0093DD', border: 'none', padding: '10px 20px', fontSize: '13px', width: '100%', justifyContent: 'center' }}>
                 Get a Quote →
               </Link>
             </div>

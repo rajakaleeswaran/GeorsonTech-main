@@ -16,6 +16,8 @@ import Clients  from "./pages/Clients";
 import Blog     from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Enquiry  from "./pages/Enquiry";
+import Industries from "./pages/Industries";
+import IndustryDetail from "./pages/IndustryDetail";
 import Admin    from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracker } from "./hooks/useVisitorTracker";
@@ -35,6 +37,8 @@ function App() {
             <Route path="/about"     element={<About />} />
             <Route path="/services"  element={<Services />} />
             <Route path="/products"  element={<Products />} />
+            <Route path="/industries" element={<Industries />} />
+            <Route path="/industries/:slug" element={<IndustryDetail />} />
             <Route path="/clients"   element={<Clients />} />
             <Route path="/blog"      element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
