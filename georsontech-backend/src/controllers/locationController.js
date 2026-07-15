@@ -12,7 +12,7 @@ export const getLocations = async (req, res) => {
 
 export const createLocation = async (req, res) => {
   const { office_name, office_type, address, phone, email, google_map_link, latitude, longitude } = req.body;
-  const image = req.file ? req.file.path : null;
+  const image = req.file ? req.file.path.replace(/\\/g, '/') : null;
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   if (!office_name || !office_type || !address) {
@@ -47,7 +47,7 @@ export const updateLocation = async (req, res) => {
     }
 
     const current = rows[0];
-    const image = req.file ? req.file.path : current.image;
+    const image = req.file ? req.file.path.replace(/\\/g, '/') : current.image;
 
     await pool.query(
       `UPDATE office_locations 

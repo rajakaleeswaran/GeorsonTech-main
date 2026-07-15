@@ -54,8 +54,11 @@ function ClientsBody() {
     fetch('http://localhost:5000/api/clients')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setClients(data);
+        if (Array.isArray(data)) {
+          const filtered = data.filter(c => c.category === 'Client' || !c.category);
+          if (filtered.length > 0) {
+            setClients(filtered);
+          }
         }
       })
       .catch(err => console.error("Failed to load clients list from API:", err));

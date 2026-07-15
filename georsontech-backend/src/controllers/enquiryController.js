@@ -51,7 +51,7 @@ export const createCareerApplication = async (req, res) => {
   }
 
   try {
-    const resumePath = req.file.path;
+    const resumePath = req.file.path.replace(/\\/g, '/');
 
     // Fetch HR recipient address dynamically from settings
     const [[hrSetting]] = await pool.query(

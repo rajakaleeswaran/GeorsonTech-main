@@ -249,7 +249,7 @@ function Blog() {
               <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.8)', marginBottom: '20px', lineHeight: 1.6 }}>
                 Get in touch with our expert team for industrial automation, IIoT, and electrical engineering projects.
               </p>
-              <Link to="/enquiry/contact" className="btn-primary" style={{ background: '#0093DD', border: 'none', padding: '10px 20px', fontSize: '13px', width: '100%', justifyContent: 'center' }}>
+              <Link to="/enquiry" className="btn-primary" style={{ background: '#0093DD', border: 'none', padding: '10px 20px', fontSize: '13px', width: '100%', justifyContent: 'center' }}>
                 Get a Quote →
               </Link>
             </div>

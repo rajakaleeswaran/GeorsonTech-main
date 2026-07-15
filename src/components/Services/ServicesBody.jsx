@@ -64,7 +64,7 @@ function ServicesBody() {
                   if (svc.features.startsWith('[') && svc.features.endsWith(']')) {
                     try {
                       featureItems = JSON.parse(svc.features);
-                    } catch (e) {
+                    } catch {
                       featureItems = svc.features.split(',');
                     }
                   } else {
@@ -132,7 +132,7 @@ function ServicesBody() {
                       {/* Action buttons */}
                       <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', pt: '10px' }}>
                         <Link 
-                          to={`/enquiry/contact?service=${encodeURIComponent(svc.title)}`}
+                          to={`/enquiry?tab=enquiry&service=${encodeURIComponent(svc.title)}`}
                           className="btn-primary" 
                           style={{
                             padding: '10px 16px',
