@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../../styles/Home.css";
+import { fetchCollection, getAssetUrl } from "../../lib/dbHelper";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -18,8 +19,7 @@ function DealWithBrand() {
   const [dbBrands, setDbBrands] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/clients')
-      .then(res => res.json())
+    fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
           const filtered = data.filter(c => c.status === 'Publish' && c.category === 'Brand');
@@ -67,7 +67,7 @@ function DealWithBrand() {
               dbBrands.map((b, index) => (
                 <SwiperSlide key={b.id || index}>
                   <div className="brand-card">
-                    <img src={`http://localhost:5000/${b.logo_path}`} alt={b.name} />
+                    <img src={getAssetUrl(b.logo_path)} alt={b.name} />
                   </div>
                 </SwiperSlide>
               ))

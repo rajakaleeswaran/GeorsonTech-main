@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaQuoteLeft, FaStar, FaBuilding, FaIndustry, FaCogs, FaTint, FaBolt, FaCar } from 'react-icons/fa';
+import { fetchCollection, getAssetUrl } from '../../lib/dbHelper';
 import "../../styles/Clients.css";
 import TitleBar from "../TitleBar";
 import ClientsTitleImg from "../../assets/Clients/titleImg.png";
@@ -51,8 +52,7 @@ function ClientsBody() {
   const [clients, setClients] = useState(FALLBACK_CLIENTS);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/clients')
-      .then(res => res.json())
+    fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
           const filtered = data.filter(c => c.category === 'Client' || !c.category);
@@ -96,7 +96,7 @@ function ClientsBody() {
                 }}
               >
                 <img 
-                  src={`http://localhost:5000/${client.logo_path}`} 
+                  src={getAssetUrl(client.logo_path)} 
                   alt={client.name} 
                   style={{
                     maxWidth: '100%',

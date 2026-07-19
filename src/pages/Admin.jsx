@@ -47,12 +47,12 @@ function Admin() {
             
             <form onSubmit={admin.handleLoginSubmit}>
               <div className="form-group">
-                <label>Admin Username</label>
+                <label>Admin Email</label>
                 <input 
-                  type="text" className="form-input" required
+                  type="email" className="form-input" required
                   value={admin.loginData.username}
                   onChange={e => admin.setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="admin"
+                  placeholder="admin@georsontech.com"
                 />
               </div>
 

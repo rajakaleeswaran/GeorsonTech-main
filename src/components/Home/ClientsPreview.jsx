@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/Home.css';
+import { fetchCollection, getAssetUrl } from '../../lib/dbHelper';
 
 const DEFAULT_CLIENTS = [
   "BHEL", "L&T", "Siemens", "ABB", "Schneider Electric",
@@ -12,8 +13,7 @@ function ClientsPreview() {
   const [clients, setClients] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/clients')
-      .then(res => res.json())
+    fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
           // Filter for Prestigious Clients only (category === 'Client' or null/default)
@@ -40,7 +40,7 @@ function ClientsPreview() {
             [...displayItems, ...displayItems].map((c, i) => (
               <div key={i} className="client-logo-item" style={{ background: 'white', padding: '10px 15px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img 
-                  src={`http://localhost:5000/${c.logo_path}`} 
+                  src={getAssetUrl(c.logo_path)} 
                   alt={c.name} 
                   style={{ maxHeight: '35px', maxWidth: '110px', objectFit: 'contain' }} 
                 />

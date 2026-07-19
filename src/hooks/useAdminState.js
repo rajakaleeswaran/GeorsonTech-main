@@ -1,12 +1,13 @@
 /**
  * @file useAdminState.js
  * @description Custom React hook managing the entire state machine of the Admin CMS.
- * Handles admin session JWT authentication, auto-redirection on token expiry (401/403),
- * analytical stats aggregation, and CRUD requests for products, services, clients, blogs,
- * backup/restore, settings, and offices.
+ * Handles admin session JWT authentication via Supabase Auth, auto-redirection on
+ * token expiry (401/403), analytical stats aggregation, and CRUD requests for products,
+ * services, clients, blogs, backup/restore, settings, and offices.
  */
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { supabase } from '../lib/supabase';
 
 export default function useAdminState() {
   const [token, setToken] = useState(() => localStorage.getItem('admin_token') || '');
@@ -133,125 +134,256 @@ export default function useAdminState() {
 
   // ─── API CONNECTORS ───
 
-  const fetchDashboardMetrics = () => {
-    adminFetch('http://localhost:5000/api/admin/dashboard', { headers: apiHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (data.metrics) setMetrics(data.metrics);
-      })
-      .catch(() => console.log('Error fetching metrics'));
+  const fetchDashboardMetrics = async () => {
+    try {
+      const res = await adminFetch('http://localhost:5000/api/admin/dashboard', { headers: apiHeaders() });
+      const data = await res.json();
+      if (data.metrics) {
+        setMetrics(data.metrics);
+        return;
+      }
+    } catch (e) {
+      console.log('Local backend down. Calculating dashboard metrics from Supabase.');
+    }
+
+    // Fallback: Calculate metrics from Supabase Cloud DB
+    try {
+      const getCount = async (table) => {
+        const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        return error ? 0 : count;
+      };
+
+      const [enquiriesCount, applicationsCount, productsCount, categoriesCount, blogsCount, servicesCount, industriesCount, clientsCount] = await Promise.all([
+        getCount('enquiries'),
+        getCount('career_applications'),
+        getCount('products'),
+        getCount('product_categories'),
+        getCount('blogs'),
+        getCount('services'),
+        getCount('industries'),
+        getCount('clients')
+      ]);
+
+      setMetrics({
+        enquiries: enquiriesCount,
+        applications: applicationsCount,
+        products: productsCount,
+        categories: categoriesCount,
+        blogs: blogsCount,
+        services: servicesCount,
+        industries: industriesCount,
+        clients: clientsCount,
+        totalVisitors: 0,
+        todayVisitors: 0
+      });
+    } catch (err) {
+      console.error('Failed to compute metrics from Supabase:', err);
+    }
   };
 
-  const fetchSettings = () => {
-    fetch('http://localhost:5000/api/settings')
-      .then(res => res.json())
-      .then(data => {
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/settings');
+      if (res.ok) {
+        const data = await res.json();
         setSettingsForm(data);
-      })
-      .catch(() => {});
-  };
-
-  const fetchLocations = () => {
-    fetch('http://localhost:5000/api/locations')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setLocations(data);
+        return;
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('settings').select('*');
+    if (!error && data) {
+      const mapped = {};
+      data.forEach(item => {
+        mapped[item.setting_key] = item.setting_value;
       });
+      setSettingsForm(mapped);
+    }
   };
 
-  const fetchProducts = () => {
-    fetch('http://localhost:5000/api/products')
-      .then(res => res.json())
-      .then(data => {
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/locations');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLocations(data);
+          return;
+        }
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('office_locations').select('*').order('created_at', { ascending: false });
+    if (!error && data) setLocations(data);
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/products');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setProducts(data);
-      });
-    fetch('http://localhost:5000/api/products/categories')
-      .then(res => res.json())
-      .then(data => {
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (!error && data) setProducts(data);
+    }
+
+    try {
+      const res = await fetch('http://localhost:5000/api/products/categories');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setProductCategories(data);
-      });
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('product_categories').select('*').order('created_at', { ascending: false });
+      if (!error && data) setProductCategories(data);
+    }
   };
 
-  const fetchBlogs = () => {
-    fetch('http://localhost:5000/api/blogs')
-      .then(res => res.json())
-      .then(data => {
+  const fetchBlogs = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/blogs');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setBlogs(data);
-      });
-    fetch('http://localhost:5000/api/blogs/categories')
-      .then(res => res.json())
-      .then(data => {
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+      if (!error && data) setBlogs(data);
+    }
+
+    try {
+      const res = await fetch('http://localhost:5000/api/blogs/categories');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setBlogCategories(data);
-      });
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('blog_categories').select('*').order('created_at', { ascending: false });
+      if (!error && data) setBlogCategories(data);
+    }
   };
 
-  const fetchServices = () => {
-    fetch('http://localhost:5000/api/services')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setServices(data);
-      });
+  const fetchServices = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/services');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setServices(data);
+          return;
+        }
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('services').select('*').order('created_at', { ascending: false });
+    if (!error && data) setServices(data);
   };
 
-  const fetchIndustries = () => {
-    fetch('http://localhost:5000/api/industries')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setIndustries(data);
-      });
+  const fetchIndustries = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/industries');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setIndustries(data);
+          return;
+        }
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('industries').select('*').order('created_at', { ascending: false });
+    if (!error && data) setIndustries(data);
   };
 
-  const fetchClients = () => {
-    fetch('http://localhost:5000/api/clients')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setClients(data);
-      });
+  const fetchClients = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/clients');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setClients(data);
+          return;
+        }
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+    if (!error && data) setClients(data);
   };
 
-  const fetchSolutions = () => {
-    fetch('http://localhost:5000/api/solutions')
-      .then(res => res.json())
-      .then(data => {
+  const fetchSolutions = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/solutions');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setSolutions(data);
-      });
-    fetch('http://localhost:5000/api/solutions/categories')
-      .then(res => res.json())
-      .then(data => {
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('solutions').select('*').order('created_at', { ascending: false });
+      if (!error && data) setSolutions(data);
+    }
+
+    try {
+      const res = await fetch('http://localhost:5000/api/solutions/categories');
+      if (res.ok) {
+        const data = await res.json();
         if (Array.isArray(data)) setSolutionCategories(data);
-      });
+      }
+    } catch (e) {
+      const { data, error } = await supabase.from('solution_categories').select('*').order('created_at', { ascending: false });
+      if (!error && data) setSolutionCategories(data);
+    }
   };
 
-  const fetchMedia = () => {
-    adminFetch('http://localhost:5000/api/admin/media', { headers: apiHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setMediaAssets(data);
-      })
-      .catch(() => {});
+  const fetchMedia = async () => {
+    try {
+      const res = await adminFetch('http://localhost:5000/api/admin/media', { headers: apiHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setMediaAssets(data);
+          return;
+        }
+      }
+    } catch (e) {}
+    const { data, error } = await supabase.from('media_library').select('*').order('created_at', { ascending: false });
+    if (!error && data) setMediaAssets(data);
   };
 
-  const fetchVisitorStats = () => {
-    adminFetch('http://localhost:5000/api/admin/analytics/visitors', { headers: apiHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (data.breakdown) setVisitorBreakdown(data.breakdown);
-      })
-      .catch(() => {});
+  const fetchVisitorStats = async () => {
+    // 1. Visitor Breakdown
+    try {
+      const res = await adminFetch('http://localhost:5000/api/admin/analytics/visitors', { headers: apiHeaders() });
+      const data = await res.json();
+      if (data.breakdown) setVisitorBreakdown(data.breakdown);
+    } catch (e) {}
 
-    adminFetch('http://localhost:5000/api/admin/enquiries', { headers: apiHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setEnquiries(data);
-      })
-      .catch(() => {});
+    // 2. Enquiries
+    try {
+      const res = await adminFetch('http://localhost:5000/api/admin/enquiries', { headers: apiHeaders() });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setEnquiries(data);
+      }
+    } catch (e) {
+      // Supabase fallback
+      const { data, error } = await supabase.from('enquiries').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        setEnquiries(data);
+      }
+    }
 
-    adminFetch('http://localhost:5000/api/admin/careers', { headers: apiHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setCareers(data);
-      })
-      .catch(() => {});
+    // 3. Career Applications
+    try {
+      const res = await adminFetch('http://localhost:5000/api/admin/careers', { headers: apiHeaders() });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCareers(data);
+      }
+    } catch (e) {
+      // Supabase fallback
+      const { data, error } = await supabase.from('career_applications').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        setCareers(data);
+      }
+    }
   };
 
   // Fetch collections when authenticated
@@ -272,73 +404,107 @@ export default function useAdminState() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, activeTab]);
 
-  // Login handler
+  // Login handler — uses Supabase Auth (email + password)
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    // The "username" field accepts an email address for Supabase auth
     if (!loginData.username || !loginData.password) {
       toast.error("Please enter credentials");
       return;
     }
     setSubmitting(true);
-    
-    fetch('http://localhost:5000/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginData)
-    })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Invalid credentials');
-      })
-      .then(data => {
-        localStorage.setItem('admin_token', data.accessToken);
-        localStorage.setItem('admin_user', JSON.stringify(data.user));
-        setUser(data.user);
-        setToken(data.accessToken);
-        setIsAuthenticated(true);
-        toast.success("Welcome back to CMS Workspace");
-      })
-      .catch(() => {
-        toast.error("Authentication failed");
-      })
-      .finally(() => setSubmitting(false));
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.username,
+        password: loginData.password,
+      });
+
+      if (error) {
+        toast.error(error.message || 'Authentication failed');
+        return;
+      }
+
+      const accessToken = data.session?.access_token || '';
+      const userInfo = {
+        username: data.user?.email || 'Admin',
+        role: data.user?.user_metadata?.role || 'super_admin',
+        id: data.user?.id,
+      };
+
+      localStorage.setItem('admin_token', accessToken);
+      localStorage.setItem('admin_user', JSON.stringify(userInfo));
+      setUser(userInfo);
+      setToken(accessToken);
+      setIsAuthenticated(true);
+      toast.success('Welcome back to CMS Workspace');
+    } catch (err) {
+      toast.error('Authentication failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     setIsAuthenticated(false);
     setUser(null);
-    toast.info("Session closed");
+    toast.info('Session closed');
   };
 
   // Status updates for Inquiries/Careers
-  const changeEnquiryStatus = (id, newStatus) => {
-    fetch(`http://localhost:5000/api/admin/enquiries/${id}/status`, {
-      method: 'PUT',
-      headers: apiHeaders(),
-      body: JSON.stringify({ status: newStatus })
-    })
-      .then(res => {
-        if (res.ok) {
-          toast.success("Enquiry status updated");
-          fetchVisitorStats();
-        }
+  const changeEnquiryStatus = async (id, newStatus) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/enquiries/${id}/status`, {
+        method: 'PUT',
+        headers: apiHeaders(),
+        body: JSON.stringify({ status: newStatus })
       });
+      if (res.ok) {
+        toast.success("Enquiry status updated");
+        fetchVisitorStats();
+        return;
+      }
+    } catch (e) {
+      console.log('Local backend down, updating Enquiry status in Supabase directly.');
+    }
+
+    // Supabase update
+    const { error } = await supabase.from('enquiries').update({ status: newStatus }).eq('id', id);
+    if (!error) {
+      toast.success("Enquiry status updated in Supabase cloud DB");
+      fetchVisitorStats();
+    } else {
+      toast.error("Failed to update status");
+    }
   };
 
-  const changeCareerStatus = (id, newStatus) => {
-    fetch(`http://localhost:5000/api/admin/careers/${id}/status`, {
-      method: 'PUT',
-      headers: apiHeaders(),
-      body: JSON.stringify({ status: newStatus })
-    })
-      .then(res => {
-        if (res.ok) {
-          toast.success("Candidate application status updated");
-          fetchVisitorStats();
-        }
+  const changeCareerStatus = async (id, newStatus) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/careers/${id}/status`, {
+        method: 'PUT',
+        headers: apiHeaders(),
+        body: JSON.stringify({ status: newStatus })
       });
+      if (res.ok) {
+        toast.success("Candidate application status updated");
+        fetchVisitorStats();
+        return;
+      }
+    } catch (e) {
+      console.log('Local backend down, updating Career application status in Supabase directly.');
+    }
+
+    // Supabase update
+    const { error } = await supabase.from('career_applications').update({ status: newStatus }).eq('id', id);
+    if (!error) {
+      toast.success("Candidate status updated in Supabase cloud DB");
+      fetchVisitorStats();
+    } else {
+      toast.error("Failed to update status");
+    }
   };
 
   // Settings Save

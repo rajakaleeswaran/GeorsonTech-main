@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import '../styles/Products.css';
+import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -16,8 +17,7 @@ function Products() {
 
   useEffect(() => {
     // Fetch Categories
-    fetch('http://localhost:5000/api/products/categories')
-      .then(res => res.json())
+    fetchCollection('/products/categories', 'product_categories')
       .then(data => {
         if (Array.isArray(data)) {
           setCategories(["All", ...data.map(cat => cat.name)]);
@@ -26,8 +26,7 @@ function Products() {
       .catch(err => console.error("Failed to fetch product categories:", err));
 
     // Fetch Products
-    fetch('http://localhost:5000/api/products')
-      .then(res => res.json())
+    fetchCollection('/products', 'products')
       .then(data => {
         if (Array.isArray(data)) {
           setProducts(data);
@@ -129,7 +128,7 @@ function Products() {
                   <div key={product.id} className="product-card">
                     <div className="product-card-img" style={{ position: 'relative', height: '220px', background: '#e2e8f0', overflow: 'hidden' }}>
                       <img 
-                        src={product.image_path ? `http://localhost:5000/${product.image_path}` : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400'} 
+                        src={product.image_path ? getAssetUrl(product.image_path) : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400'} 
                         alt={product.name} 
                         loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -158,9 +157,9 @@ function Products() {
                         >
                           <FaInfoCircle /> Details
                         </button>
-                        {product.pdf_brochure_path && (
+                         {product.pdf_brochure_path && (
                           <a 
-                            href={`http://localhost:5000/${product.pdf_brochure_path}`} 
+                            href={getAssetUrl(product.pdf_brochure_path)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="product-btn-pdf" 
@@ -233,7 +232,7 @@ function Products() {
             {/* Modal Image */}
             <div style={{ height: '260px', width: '100%', background: '#e2e8f0' }}>
               <img 
-                src={selectedProduct.image_path ? `http://localhost:5000/${selectedProduct.image_path}` : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
+                src={selectedProduct.image_path ? getAssetUrl(selectedProduct.image_path) : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
                 alt={selectedProduct.name} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -278,9 +277,9 @@ function Products() {
                 >
                   <FaEnvelope /> Request Callback
                 </Link>
-                {selectedProduct.pdf_brochure_path && (
+                 {selectedProduct.pdf_brochure_path && (
                   <a 
-                    href={`http://localhost:5000/${selectedProduct.pdf_brochure_path}`} 
+                    href={getAssetUrl(selectedProduct.pdf_brochure_path)} 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="btn-outline"
