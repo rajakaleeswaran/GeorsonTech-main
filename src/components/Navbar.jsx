@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from "react-router-dom";
 import Logo from '../assets/Logo/Georson.png';
 import '../styles/Components.css';
-import { FaBars, FaTimes } from 'react-icons/fa';
+import { FaBars } from 'react-icons/fa';
 
 function Navbar() {
   const [isOpen, setIsOpen]   = useState(false);
@@ -41,12 +41,12 @@ function Navbar() {
 
       {/* Hamburger */}
       <button
-        className="navbar-hamburger"
+        className={`navbar-hamburger${isOpen ? ' open' : ''}`}
         onClick={toggleMenu}
         aria-label="Toggle menu"
         aria-expanded={isOpen}
       >
-        {isOpen ? <FaTimes /> : <FaBars />}
+        <FaBars />
       </button>
 
       {/* Nav Links */}

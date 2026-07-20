@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaCheckCircle, FaFilePdf, FaEnvelope, FaSearch, FaArrowRight } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import "../../styles/Services.css";
+import { fetchCollection, getAssetUrl } from "../../lib/dbHelper";
 
 function ServicesBody() {
   const [services, setServices] = useState([]);
@@ -9,8 +10,7 @@ function ServicesBody() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/services')
-      .then(res => res.json())
+    fetchCollection('/services', 'services')
       .then(data => {
         if (Array.isArray(data)) {
           setServices(data);
@@ -98,7 +98,7 @@ function ServicesBody() {
                     {/* Service Image */}
                     <div style={{ height: '200px', width: '100%', overflow: 'hidden', background: '#e2e8f0' }}>
                       <img 
-                        src={svc.image_path ? `http://localhost:5000/${svc.image_path}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=600'} 
+                        src={svc.image_path ? getAssetUrl(svc.image_path) : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=600'} 
                         alt={svc.title} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
@@ -146,7 +146,7 @@ function ServicesBody() {
                         </Link>
                         {svc.pdf_brochure_path && (
                           <a 
-                            href={`http://localhost:5000/${svc.pdf_brochure_path}`} 
+                            href={getAssetUrl(svc.pdf_brochure_path)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="btn-outline"

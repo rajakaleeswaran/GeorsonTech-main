@@ -5,6 +5,7 @@ import { FaSearch, FaCalendarAlt, FaClock, FaArrowRight, FaUser, FaTag } from 'r
 import TitleBar from '../components/TitleBar';
 import BlogTitleImg from '../assets/About/titleImg.png';
 import '../styles/Blog.css';
+import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
 
 function Blog() {
   const [blogs, setBlogs] = useState([]);
@@ -19,16 +20,14 @@ function Blog() {
 
   useEffect(() => {
     // Fetch categories
-    fetch('http://localhost:5000/api/blogs/categories')
-      .then(res => res.json())
+    fetchCollection('/blogs/categories', 'blog_categories')
       .then(data => {
         if (Array.isArray(data)) setCategories(data);
       })
       .catch(err => console.error("Error loading categories:", err));
 
     // Fetch blogs
-    fetch('http://localhost:5000/api/blogs')
-      .then(res => res.json())
+    fetchCollection('/blogs', 'blogs')
       .then(data => {
         if (Array.isArray(data)) setBlogs(data);
       })
@@ -88,7 +87,7 @@ function Blog() {
                     <span className="section-label" style={{ marginBottom: '8px' }}>Recent Article</span>
                     <Link to={`/blog/${featured.slug}`} className="blog-featured" style={{ position: 'relative', display: 'block', borderRadius: '12px', overflow: 'hidden', height: '400px' }}>
                       <img 
-                        src={featured.featured_image ? `http://localhost:5000/${featured.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=800'} 
+                        src={featured.featured_image ? getAssetUrl(featured.featured_image) : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=800'} 
                         alt={featured.title} 
                         className="blog-featured-img" 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -124,7 +123,7 @@ function Blog() {
                         <Link key={blog.id} to={`/blog/${blog.slug}`} className="blog-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
                           <div className="blog-card-img" style={{ height: '180px', overflow: 'hidden' }}>
                             <img 
-                              src={blog.featured_image ? `http://localhost:5000/${blog.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=400'} 
+                              src={blog.featured_image ? getAssetUrl(blog.featured_image) : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=400'} 
                               alt={blog.title} 
                               loading="lazy" 
                               style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}

@@ -3,6 +3,8 @@ import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { FaCalendarAlt, FaClock, FaUser, FaArrowLeft, FaLinkedinIn, FaFacebookF, FaEnvelope } from 'react-icons/fa';
 import '../styles/Blog.css';
+import { supabase } from '../lib/supabase';
+import { getAssetUrl } from '../lib/dbHelper';
 
 function BlogPost() {
   const { slug } = useParams();
@@ -11,34 +13,59 @@ function BlogPost() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    const fetchPostDetails = async () => {
       setLoading(true);
-    }, 0);
-    // Fetch individual post details
-    fetch(`http://localhost:5000/api/blogs/${slug}`)
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error("Article not found");
-      })
-      .then(data => {
-        setPost(data);
-        
-        // Fetch related posts (same category, excluding this one)
-        fetch('http://localhost:5000/api/blogs')
-          .then(res => res.json())
-          .then(allBlogs => {
-            if (Array.isArray(allBlogs)) {
-              const matches = allBlogs.filter(b => b.slug !== slug && b.category_name === data.category_name);
-              setRelated(matches.slice(0, 2));
+
+      // 1. Attempt local backend fetch
+      try {
+        const res = await fetch(`http://localhost:5000/api/blogs/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPost(data);
+          
+          try {
+            const allBlogsRes = await fetch('http://localhost:5000/api/blogs');
+            if (allBlogsRes.ok) {
+              const allBlogs = await allBlogsRes.json();
+              if (Array.isArray(allBlogs)) {
+                const matches = allBlogs.filter(b => b.slug !== slug && b.category_name === data.category_name);
+                setRelated(matches.slice(0, 2));
+              }
             }
-          })
-          .catch(() => {});
-      })
-      .catch(err => {
-        console.error(err);
+          } catch (e) {}
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Local backend down. Querying Supabase for blog details.");
+      }
+
+      // 2. Supabase Fallback
+      const { data: postData, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (!error && postData) {
+        setPost(postData);
+
+        // Fetch related posts
+        const { data: allBlogs, error: listError } = await supabase
+          .from('blogs')
+          .select('*');
+
+        if (!listError && allBlogs) {
+          const matches = allBlogs.filter(b => b.slug !== slug && b.category_id === postData.category_id);
+          setRelated(matches.slice(0, 2));
+        }
+      } else {
         setPost(null);
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    };
+
+    fetchPostDetails();
   }, [slug]);
 
   const formatDate = (dateStr) => {
@@ -72,7 +99,7 @@ function BlogPost() {
         <meta name="description" content={post.excerpt || post.title} />
         <meta property="og:title" content={post.title} />
         <meta property="og:description" content={post.excerpt} />
-        <meta property="og:image" content={post.featured_image ? `http://localhost:5000/${post.featured_image}` : ''} />
+        <meta property="og:image" content={post.featured_image ? getAssetUrl(post.featured_image) : ''} />
         <link rel="canonical" href={`https://www.georsontech.com/blog/${slug}`} />
       </Helmet>
 
@@ -87,7 +114,7 @@ function BlogPost() {
 
             <div className="blog-post-hero" style={{ height: '360px', width: '100%', overflow: 'hidden', borderRadius: '8px', marginBottom: '20px' }}>
               <img 
-                src={post.featured_image ? `http://localhost:5000/${post.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=805'} 
+                src={post.featured_image ? getAssetUrl(post.featured_image) : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=805'} 
                 alt={post.title} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />

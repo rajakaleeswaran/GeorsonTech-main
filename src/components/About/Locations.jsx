@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaBuilding, FaIndustry, FaCogs, FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaCompass } from 'react-icons/fa';
+import { fetchCollection } from '../../lib/dbHelper';
 
 const FALLBACK_LOCATIONS = [
   {
@@ -33,8 +34,7 @@ function Locations() {
   const [offices, setOffices] = useState(FALLBACK_LOCATIONS);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/locations')
-      .then(res => res.json())
+    fetchCollection('/locations', 'office_locations')
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setOffices(data);

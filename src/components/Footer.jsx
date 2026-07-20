@@ -7,6 +7,7 @@ import {
   FaPhone, FaEnvelope, FaMapMarkerAlt,
   FaBuilding, FaCogs, FaIndustry, FaAngleRight
 } from 'react-icons/fa';
+import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
 
 const FALLBACK_OFFICES = [
   {
@@ -48,16 +49,23 @@ function Footer() {
 
   useEffect(() => {
     // Fetch Settings
-    fetch('http://localhost:5000/api/settings')
-      .then(res => res.json())
+    fetchCollection('/settings', 'settings')
       .then(data => {
-        setSettings(data);
+        // settings table in postgres stores key-value rows
+        if (Array.isArray(data)) {
+          const mappedSettings = {};
+          data.forEach(item => {
+            mappedSettings[item.setting_key] = item.setting_value;
+          });
+          setSettings(mappedSettings);
+        } else if (data && typeof data === 'object') {
+          setSettings(data);
+        }
       })
       .catch(() => console.log('Using offline settings fallback'));
 
     // Fetch Locations
-    fetch('http://localhost:5000/api/locations')
-      .then(res => res.json())
+    fetchCollection('/locations', 'office_locations')
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setOffices(data);
@@ -66,24 +74,21 @@ function Footer() {
       .catch(() => console.log('Using offline locations fallback'));
 
     // Fetch Services for links (limit 4)
-    fetch('http://localhost:5000/api/services')
-      .then(res => res.json())
+    fetchCollection('/services', 'services')
       .then(data => {
         if (Array.isArray(data)) setServices(data.slice(0, 4));
       })
       .catch(() => {});
 
     // Fetch Products for links (limit 4)
-    fetch('http://localhost:5000/api/products')
-      .then(res => res.json())
+    fetchCollection('/products', 'products')
       .then(data => {
         if (Array.isArray(data)) setProducts(data.slice(0, 4));
       })
       .catch(() => {});
 
     // Fetch Industries for links (limit 4)
-    fetch('http://localhost:5000/api/industries')
-      .then(res => res.json())
+    fetchCollection('/industries', 'industries')
       .then(data => {
         if (Array.isArray(data)) setIndustries(data.slice(0, 4));
       })
@@ -92,12 +97,7 @@ function Footer() {
 
   const getLogoSrc = () => {
     if (!settings.logo_url) return LogoImg;
-    if (settings.logo_url.startsWith('http')) return settings.logo_url;
-    if (settings.logo_url.startsWith('/uploads') || settings.logo_url.startsWith('uploads')) {
-      const cleanPath = settings.logo_url.startsWith('/') ? settings.logo_url : `/${settings.logo_url}`;
-      return `http://localhost:5000${cleanPath}`;
-    }
-    return LogoImg;
+    return getAssetUrl(settings.logo_url);
   };
 
   return (

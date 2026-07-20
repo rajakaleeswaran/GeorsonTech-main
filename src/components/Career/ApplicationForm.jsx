@@ -84,38 +84,31 @@ function ApplicationForm({ selectedJob }) {
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('email', form.email);
-      formData.append('phone', form.phone);
-      formData.append('qualification', form.qualification);
-      formData.append('experience', form.experience);
-      formData.append('coverLetter', form.coverLetter);
-      formData.append('position', form.position);
-      formData.append('resume', resumeFile);
+      const { submitCareerApplication } = await import('../../lib/dbHelper');
+      
+      const careerForm = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        qualification: form.qualification,
+        experience: form.experience,
+        coverLetter: form.coverLetter,
+        position: form.position
+      };
 
-      const response = await fetch("http://localhost:5000/api/career", {
-        method: "POST",
-        body: formData
+      await submitCareerApplication(careerForm, resumeFile);
+      toast.success("Your career application has been successfully sent!");
+      setForm({
+        name: '',
+        email: '',
+        phone: '',
+        qualification: '',
+        experience: '',
+        position: '',
+        coverLetter: ''
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("Your career application has been successfully sent!");
-        setForm({
-          name: '',
-          email: '',
-          phone: '',
-          qualification: '',
-          experience: '',
-          position: '',
-          coverLetter: ''
-        });
-        setResumeFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      } else {
-        toast.error(data.message || "Failed to submit career application.");
-      }
+      setResumeFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error(error);
       toast.error("Network error. Failed to submit application.");

@@ -11,6 +11,7 @@ import { FaBuilding, FaBriefcase } from 'react-icons/fa';
 import TitleBar from '../components/TitleBar';
 import ContactTitleImg from '../assets/Contact/titleImg.png';
 import '../styles/Enquiry.css';
+import { submitEnquiry, submitCareerApplication } from '../lib/dbHelper';
 
 // Modular components
 import EnquiryFormTab from '../components/Enquiry/EnquiryFormTab';
@@ -169,28 +170,20 @@ function Enquiry() {
 
     setSubmitting(true);
     try {
-      const response = await fetch("http://localhost:5000/api/enquiry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(enquiryForm)
+      await submitEnquiry(enquiryForm);
+      setSubmitted(true);
+      toast.success('Your business enquiry has been submitted successfully!');
+      setEnquiryForm({
+        name: '',
+        company: '',
+        email: '',
+        phone: '',
+        subject: '',
+        serviceInterested: '',
+        message: ''
       });
-      const data = await response.json();
-      if (response.ok) {
-        setSubmitted(true);
-        toast.success('Your business enquiry has been submitted successfully!');
-        setEnquiryForm({
-          name: '',
-          company: '',
-          email: '',
-          phone: '',
-          subject: '',
-          serviceInterested: '',
-          message: ''
-        });
-      } else {
-        toast.error(data.message || 'Failed to submit enquiry.');
-      }
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('Failed to submit enquiry. Please try again later.');
     } finally {
       setSubmitting(false);
@@ -209,37 +202,21 @@ function Enquiry() {
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('name', careerForm.name);
-      formData.append('email', careerForm.email);
-      formData.append('phone', careerForm.phone);
-      formData.append('qualification', careerForm.qualification);
-      formData.append('experience', careerForm.experience);
-      formData.append('coverLetter', careerForm.coverLetter);
-      formData.append('resume', resume);
-
-      const response = await fetch("http://localhost:5000/api/career", {
-        method: "POST",
-        body: formData
+      await submitCareerApplication(careerForm, resume);
+      setSubmitted(true);
+      toast.success('Your job application has been submitted successfully!');
+      setCareerForm({
+        name: '',
+        email: '',
+        phone: '',
+        qualification: '',
+        experience: '',
+        coverLetter: ''
       });
-      const data = await response.json();
-      if (response.ok) {
-        setSubmitted(true);
-        toast.success('Your job application has been submitted successfully!');
-        setCareerForm({
-          name: '',
-          email: '',
-          phone: '',
-          qualification: '',
-          experience: '',
-          coverLetter: ''
-        });
-        setResume(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } else {
-        toast.error(data.message || 'Failed to submit application.');
-      }
-    } catch {
+      setResume(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      console.error(error);
       toast.error('Failed to submit application. Please try again.');
     } finally {
       setSubmitting(false);

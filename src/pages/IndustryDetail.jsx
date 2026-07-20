@@ -4,6 +4,8 @@ import { useParams, Link } from 'react-router-dom';
 import { FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaLightbulb, FaEnvelope, FaTools } from 'react-icons/fa';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
+import { supabase } from '../lib/supabase';
+import { getAssetUrl } from '../lib/dbHelper';
 
 // Fallback challenges and capabilities depending on industry sector slug
 const SECTOR_METADATA = {
@@ -29,30 +31,62 @@ function IndustryDetail() {
 
   useEffect(() => {
     setLoading(true);
-    // Fetch industry by slug
-    fetch(`http://localhost:5000/api/industries/${slug}`)
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Industry not found');
-      })
-      .then(data => {
-        setIndustry(data);
-        
-        // Fetch related solutions associated with this industry
-        fetch(`http://localhost:5000/api/solutions?industry=${data.id}`)
-          .then(res => res.json())
-          .then(solData => {
-            if (Array.isArray(solData)) {
-              setSolutions(solData);
+
+    const fetchIndustry = async () => {
+      // 1. Try local backend
+      try {
+        const res = await fetch(`http://localhost:5000/api/industries/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIndustry(data);
+          
+          try {
+            const solRes = await fetch(`http://localhost:5000/api/solutions?industry=${data.id}`);
+            if (solRes.ok) {
+              const solData = await solRes.json();
+              if (Array.isArray(solData)) setSolutions(solData);
             }
-          })
-          .catch(() => {});
-      })
-      .catch(err => {
-        console.error(err);
+          } catch (e) {}
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Local backend down. Querying Supabase for industry details.");
+      }
+
+      // 2. Supabase Fallback
+      const { data: indData, error } = await supabase
+        .from('industries')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (!error && indData) {
+        setIndustry(indData);
+
+        // Fetch solutions
+        const { data: solData, error: solError } = await supabase
+          .from('solutions')
+          .select('*');
+        
+        if (!solError && solData) {
+          const filteredSolutions = solData.filter(sol => {
+            try {
+              const ids = typeof sol.industry_ids === 'string' ? JSON.parse(sol.industry_ids) : sol.industry_ids;
+              return Array.isArray(ids) && ids.includes(indData.id);
+            } catch {
+              return false;
+            }
+          });
+          setSolutions(filteredSolutions);
+        }
+      } else {
         setIndustry(null);
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    };
+
+    fetchIndustry();
   }, [slug]);
 
   if (loading) {
@@ -118,7 +152,7 @@ function IndustryDetail() {
             {/* Header Image */}
             <div style={{ height: '320px', borderRadius: '12px', overflow: 'hidden', marginBottom: '35px', background: '#cbd5e1' }}>
               <img 
-                src={industry.image_path ? `http://localhost:5000/${industry.image_path}` : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
+                src={industry.image_path ? getAssetUrl(industry.image_path) : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
                 alt={industry.name} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />

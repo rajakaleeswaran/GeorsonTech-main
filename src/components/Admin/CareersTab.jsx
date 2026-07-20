@@ -41,7 +41,7 @@ function CareersTab({
                   <button className="admin-action-btn admin-btn-edit" onClick={() => setViewItem(c)}>
                     <FaEye /> Detail
                   </button>
-                  <a href={`http://localhost:5000/${c.resume_path}`} target="_blank" rel="noopener noreferrer" className="admin-action-btn admin-btn-edit" style={{ textDecoration: 'none' }}>
+                  <a href={c.resume_path ? (c.resume_path.startsWith('http') ? c.resume_path : `http://localhost:5000/${c.resume_path}`) : '#'} target="_blank" rel="noopener noreferrer" className="admin-action-btn admin-btn-edit" style={{ textDecoration: 'none' }}>
                     <FaDownload /> Resume
                   </a>
                 </td>
