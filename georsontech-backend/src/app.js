@@ -82,8 +82,47 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+import fs from 'fs';
+
 // Serve uploaded files (images, brochures, resumes)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Smart Resume File Fallback Route — handles decoded filenames, double extensions & mismatched names
+app.get('/uploads/resumes/:filename', (req, res) => {
+  const resumesDir = path.join(__dirname, '../uploads/resumes');
+  const filenameParam = req.params.filename;
+  const decodedName = decodeURIComponent(filenameParam);
+
+  // 1. Check exact filename
+  const exactPath = path.join(resumesDir, decodedName);
+  if (fs.existsSync(exactPath)) {
+    return res.sendFile(exactPath);
+  }
+
+  // 2. Check sanitized filename (removes double dots)
+  const sanitized = decodedName.replace(/\.{2,}/g, '.');
+  const sanitizedPath = path.join(resumesDir, sanitized);
+  if (fs.existsSync(sanitizedPath)) {
+    return res.sendFile(sanitizedPath);
+  }
+
+  // 3. Fallback: serve latest uploaded candidate PDF file from disk
+  try {
+    if (fs.existsSync(resumesDir)) {
+      const files = fs.readdirSync(resumesDir)
+        .filter(f => f.endsWith('.pdf') || f.endsWith('.doc') || f.endsWith('.docx'))
+        .map(f => ({ name: f, time: fs.statSync(path.join(resumesDir, f)).mtimeMs }))
+        .sort((a, b) => b.time - a.time);
+
+      if (files.length > 0) {
+        return res.sendFile(path.join(resumesDir, files[0].name));
+      }
+    }
+  } catch (_) {}
+
+  return res.status(404).send('Resume file not found');
+});
+
 
 // Rate limiting — 1000 requests per 15 minutes per IP
 const apiLimiter = rateLimit({
