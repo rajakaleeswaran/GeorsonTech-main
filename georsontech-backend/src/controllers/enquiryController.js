@@ -79,16 +79,18 @@ export const createCareerApplication = async (req, res) => {
 
     return res.status(201).json({
       message: 'Application submitted successfully',
-      applicationId: result.insertId
+      applicationId: result.insertId,
+      resumePath
     });
   } catch (error) {
     const memId = Date.now();
-    memoryCareers.push({ id: memId, name, email, phone, qualification, experience, coverLetter, status: 'Pending', created_at: new Date().toISOString() });
+    memoryCareers.push({ id: memId, name, email, phone, qualification, experience, coverLetter, status: 'Pending', created_at: new Date().toISOString(), resume_path: resumePath });
     console.warn('MySQL offline – career application saved in memory');
 
     return res.status(201).json({
       message: 'Application submitted successfully',
-      applicationId: memId
+      applicationId: memId,
+      resumePath
     });
   }
 };

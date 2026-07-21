@@ -460,6 +460,17 @@ function Admin() {
                           download
                           className="btn-primary" 
                           style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#16a34a', borderColor: '#16a34a' }}
+                          onClick={async (e) => {
+                            if (!item.resume_path.startsWith('http')) {
+                              try {
+                                const check = await fetch(resumeUrl, { method: 'HEAD' });
+                                if (!check.ok) {
+                                  e.preventDefault();
+                                  toast.error(`⚠️ Resume file "${item.resume_path.split('/').pop()}" was not saved on the backend server.`);
+                                }
+                              } catch (_) {}
+                            }
+                          }}
                         >
                           <FaDownload /> Download
                         </a>
@@ -469,6 +480,17 @@ function Admin() {
                           rel="noopener noreferrer"
                           className="btn-outline" 
                           style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#15803d', borderColor: '#86efac' }}
+                          onClick={async (e) => {
+                            if (!item.resume_path.startsWith('http')) {
+                              try {
+                                const check = await fetch(resumeUrl, { method: 'HEAD' });
+                                if (!check.ok) {
+                                  e.preventDefault();
+                                  toast.error(`⚠️ Resume file "${item.resume_path.split('/').pop()}" was not saved on the backend server.`);
+                                }
+                              } catch (_) {}
+                            }
+                          }}
                         >
                           <FaExternalLinkAlt /> Open
                         </a>

@@ -8,10 +8,28 @@ function CareersTab({
   changeCareerStatus,
   setViewItem
 }) {
-  const handleResumeClick = (e, resumePath) => {
+  const handleResumeDownload = async (e, resumePath, candidateName) => {
     if (!resumePath) {
       e.preventDefault();
-      toast.warn("No resume file was uploaded by this candidate.");
+      toast.warn(`No resume file attached for ${candidateName}.`);
+      return;
+    }
+
+    const fileUrl = getAssetUrl(resumePath, 'resume');
+
+    // Verify file exists on server before navigating
+    if (!resumePath.startsWith('http')) {
+      try {
+        const res = await fetch(fileUrl, { method: 'HEAD' });
+        if (!res.ok) {
+          e.preventDefault();
+          const fileName = resumePath.split('/').pop();
+          toast.error(`⚠️ File "${fileName}" not found on storage server. Candidate: ${candidateName}`);
+          return;
+        }
+      } catch (_) {
+        // Cross-origin or network check skip — proceed to link target
+      }
     }
   };
 
@@ -72,7 +90,7 @@ function CareersTab({
                           download
                           className="admin-action-btn admin-btn-edit" 
                           style={{ textDecoration: 'none', background: '#dcfce7', color: '#15803d' }}
-                          onClick={e => handleResumeClick(e, c.resume_path)}
+                          onClick={e => handleResumeDownload(e, c.resume_path, c.name)}
                         >
                           <FaDownload /> Resume
                         </a>
