@@ -7,6 +7,8 @@ import ServicesTitleImg from '../assets/Services/titleImg.png';
 import SectorsGrid from '../components/Industries/SectorsGrid';
 import EcosystemInteractive from '../components/Industries/EcosystemInteractive';
 import SolutionsTaxonomy from '../components/Industries/SolutionsTaxonomy';
+import { API_BASE_URL, getAssetUrl } from '../lib/api';
+
 
 function Industries() {
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -16,7 +18,7 @@ function Industries() {
     window.scrollTo(0, 0);
 
     // Fetch dynamic products to show related products
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/products`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -25,6 +27,7 @@ function Industries() {
       })
       .catch(() => {});
   }, []);
+
 
   return (
     <>
@@ -63,13 +66,13 @@ function Industries() {
               Georson Tech delivers comprehensive engineering, industrial, automation, electrical, mechanical, technology, and project execution solutions across diverse industries. From engineering consultation and system design to installation, commissioning, automation, and lifecycle support, we provide reliable solutions tailored to every industry’s operational requirements.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
-              <a href="#industries-grid" className="btn-primary" style={{ padding: '14px 28px', background: '#0093DD', border: 'none' }}>
+              <a href="#industries-grid" className="btn-primary" style={{ padding: '14px 28px', background: '#0093DD', border: '2px solid #0093DD', color: '#fff', borderRadius: '6px', fontWeight: '600', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
                 Explore Industries
               </a>
-              <a href="#solutions-ecosystem" className="btn-outline" style={{ padding: '14px 28px', color: '#fff', borderColor: '#ffffff' }}>
+              <a href="#solutions-ecosystem" style={{ padding: '14px 28px', color: '#fff', border: '2px solid #ffffff', borderRadius: '6px', fontWeight: '600', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(4px)' }}>
                 Explore Our Solutions
               </a>
-              <Link to="/enquiry" className="btn-primary" style={{ padding: '14px 28px', background: 'transparent', border: '2px solid #0093DD', color: '#0093DD' }}>
+              <Link to="/enquiry" style={{ padding: '14px 28px', background: 'transparent', border: '2px solid #0093DD', color: '#0093DD', borderRadius: '6px', fontWeight: '600', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
                 Talk to Our Experts
               </Link>
             </div>
@@ -171,7 +174,8 @@ function Industries() {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ height: '180px', background: '#f1f5f9' }}>
-                      <img src={`http://localhost:5000/${prod.image_path}`} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getAssetUrl(prod.image_path)} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
                     </div>
                     <div style={{ padding: '20px' }}>
                       <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 10px' }}>{prod.name}</h4>

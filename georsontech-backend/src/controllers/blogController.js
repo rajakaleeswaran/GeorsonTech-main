@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Public endpoints
 export const getBlogs = async (req, res) => {
@@ -24,8 +25,7 @@ export const getBlogs = async (req, res) => {
     const [blogs] = await pool.query(query, params);
     return res.json(blogs);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve blogs' });
+    return handleDbError(error, 'Failed to retrieve blogs', res);
   }
 };
 
@@ -47,7 +47,7 @@ export const getBlogBySlug = async (req, res) => {
 
     return res.json(blogs[0]);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to retrieve blog post' });
+    return handleDbError(error, 'Failed to retrieve blog post', res);
   }
 };
 
@@ -61,7 +61,7 @@ export const getBlogCategories = async (req, res) => {
     );
     return res.json(categories);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to retrieve blog categories' });
+    return handleDbError(error, 'Failed to retrieve blog categories', res);
   }
 };
 
@@ -69,7 +69,7 @@ export const getBlogCategories = async (req, res) => {
 export const createBlog = async (req, res) => {
   const { category_id, title, slug, excerpt, content, status, seo_title, meta_description, seo_keywords } = req.body;
   const featured_image = req.file ? req.file.path.replace(/\\/g, '/') : null;
-  const author_id = req.user.id; // From authenticateToken middleware
+  const author_id = req.user?.id || 1;
 
   if (!title || !slug || !content) {
     return res.status(400).json({ message: 'Title, slug, and content are required' });
@@ -84,8 +84,7 @@ export const createBlog = async (req, res) => {
 
     return res.status(201).json({ message: 'Blog created successfully', blogId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create blog post' });
+    return handleDbError(error, 'Failed to create blog post', res);
   }
 };
 
@@ -111,8 +110,7 @@ export const updateBlog = async (req, res) => {
 
     return res.json({ message: 'Blog post updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update blog post' });
+    return handleDbError(error, 'Failed to update blog post', res);
   }
 };
 
@@ -125,7 +123,7 @@ export const deleteBlog = async (req, res) => {
     }
     return res.json({ message: 'Blog post deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete blog post' });
+    return handleDbError(error, 'Failed to delete blog post', res);
   }
 };
 
@@ -138,8 +136,7 @@ export const createBlogCategory = async (req, res) => {
     const [result] = await pool.query('INSERT INTO blog_categories (name, slug) VALUES (?, ?)', [name, slug]);
     return res.status(201).json({ message: 'Blog category created successfully', categoryId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create blog category' });
+    return handleDbError(error, 'Failed to create blog category', res);
   }
 };
 
@@ -153,15 +150,13 @@ export const updateBlogCategory = async (req, res) => {
     }
     return res.json({ message: 'Blog category updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update blog category' });
+    return handleDbError(error, 'Failed to update blog category', res);
   }
 };
 
 export const deleteBlogCategory = async (req, res) => {
   const { id } = req.params;
   try {
-    // Check if category is used
     const [blogs] = await pool.query('SELECT id FROM blogs WHERE category_id = ?', [id]);
     if (blogs.length > 0) {
       return res.status(400).json({ message: 'Cannot delete blog category that is currently in use' });
@@ -173,7 +168,6 @@ export const deleteBlogCategory = async (req, res) => {
     }
     return res.json({ message: 'Blog category deleted successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to delete blog category' });
+    return handleDbError(error, 'Failed to delete blog category', res);
   }
 };

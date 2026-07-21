@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
-import { FaInstagram, FaLinkedinIn, FaFacebookF, FaYoutube } from 'react-icons/fa';
+import { FaInstagram, FaLinkedinIn, FaFacebookF, FaYoutube, FaPinterestP, FaTwitter } from 'react-icons/fa';
 
 function ContactInfo() {
   return (
@@ -49,13 +49,19 @@ function ContactInfo() {
         <a href="https://www.linkedin.com/company/georsontech" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-linkedin">
           <FaLinkedinIn />
         </a>
-        <a href="https://www.instagram.com/georsontech" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-instagram">
+        <a href="https://www.instagram.com/georsontech_india?igsh=b3ZzaDk2c2Z2NXR6&utm_source=qr" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-instagram">
           <FaInstagram />
         </a>
         <a href="https://www.facebook.com/georsontech" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-facebook">
           <FaFacebookF />
         </a>
-        <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-youtube">
+        <a href="https://x.com/Georson_Tech" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-twitter">
+          <FaTwitter />
+        </a>
+        <a href="https://pin.it/1HN8gSx89" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-pinterest">
+          <FaPinterestP />
+        </a>
+        <a href="https://youtube.com/@georsontech_india?si=nDzNJQRTZdgTEo0V" target="_blank" rel="noopener noreferrer" className="contact-social-circle contact-youtube">
           <FaYoutube />
         </a>
       </div>
@@ -64,3 +70,5 @@ function ContactInfo() {
 }
 
 export default ContactInfo;
+
+

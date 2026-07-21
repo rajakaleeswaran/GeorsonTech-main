@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 export const trackVisitor = async (req, res) => {
   const { url, country, device, browser, referrer } = req.body;
@@ -16,8 +17,7 @@ export const trackVisitor = async (req, res) => {
     );
     return res.status(201).json({ message: 'Visit tracked successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to record visit log' });
+    return handleDbError(error, 'Failed to record visit log', res);
   }
 };
 
@@ -40,17 +40,16 @@ export const getVisitorStats = async (req, res) => {
     const [popularPages] = await pool.query('SELECT url, COUNT(*) as count FROM visitor_logs GROUP BY url ORDER BY count DESC LIMIT 10');
 
     return res.json({
-      total: totalVisits.count,
-      today: todayVisits.count,
+      total: totalVisits ? totalVisits.count : 0,
+      today: todayVisits ? todayVisits.count : 0,
       breakdown: {
-        browsers,
-        devices,
-        countries,
-        popularPages
+        browsers: browsers || [],
+        devices: devices || [],
+        countries: countries || [],
+        popularPages: popularPages || []
       }
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to build analytics stats' });
+    return handleDbError(error, 'Failed to build analytics stats', res);
   }
 };

@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Public endpoints
 export const getClients = async (req, res) => {
@@ -16,8 +17,7 @@ export const getClients = async (req, res) => {
     const [clients] = await pool.query(query, params);
     return res.json(clients);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve clients' });
+    return handleDbError(error, 'Failed to retrieve clients', res);
   }
 };
 
@@ -42,8 +42,7 @@ export const createClient = async (req, res) => {
 
     return res.status(201).json({ message: 'Client created successfully', clientId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create client' });
+    return handleDbError(error, 'Failed to create client', res);
   }
 };
 
@@ -69,8 +68,7 @@ export const updateClient = async (req, res) => {
 
     return res.json({ message: 'Client updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update client' });
+    return handleDbError(error, 'Failed to update client', res);
   }
 };
 
@@ -83,6 +81,6 @@ export const deleteClient = async (req, res) => {
     }
     return res.json({ message: 'Client deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete client' });
+    return handleDbError(error, 'Failed to delete client', res);
   }
 };

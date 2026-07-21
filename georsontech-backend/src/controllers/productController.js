@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Public endpoints
 export const getProducts = async (req, res) => {
@@ -28,8 +29,7 @@ export const getProducts = async (req, res) => {
     const [products] = await pool.query(query, params);
     return res.json(products);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve products' });
+    return handleDbError(error, 'Failed to retrieve products', res);
   }
 };
 
@@ -38,7 +38,7 @@ export const getProductCategories = async (req, res) => {
     const [categories] = await pool.query('SELECT * FROM product_categories ORDER BY name ASC');
     return res.json(categories);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to retrieve product categories' });
+    return handleDbError(error, 'Failed to retrieve product categories', res);
   }
 };
 
@@ -61,8 +61,7 @@ export const createProduct = async (req, res) => {
 
     return res.status(201).json({ message: 'Product created successfully', productId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create product' });
+    return handleDbError(error, 'Failed to create product', res);
   }
 };
 
@@ -89,8 +88,7 @@ export const updateProduct = async (req, res) => {
 
     return res.json({ message: 'Product updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update product' });
+    return handleDbError(error, 'Failed to update product', res);
   }
 };
 
@@ -103,7 +101,7 @@ export const deleteProduct = async (req, res) => {
     }
     return res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete product' });
+    return handleDbError(error, 'Failed to delete product', res);
   }
 };
 
@@ -116,8 +114,7 @@ export const createProductCategory = async (req, res) => {
     const [result] = await pool.query('INSERT INTO product_categories (name, slug) VALUES (?, ?)', [name, slug]);
     return res.status(201).json({ message: 'Product category created successfully', categoryId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create product category' });
+    return handleDbError(error, 'Failed to create product category', res);
   }
 };
 
@@ -131,8 +128,7 @@ export const updateProductCategory = async (req, res) => {
     }
     return res.json({ message: 'Product category updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update product category' });
+    return handleDbError(error, 'Failed to update product category', res);
   }
 };
 
@@ -151,7 +147,6 @@ export const deleteProductCategory = async (req, res) => {
     }
     return res.json({ message: 'Product category deleted successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to delete product category' });
+    return handleDbError(error, 'Failed to delete product category', res);
   }
 };

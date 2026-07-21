@@ -1,8 +1,7 @@
 import pool from '../config/db.js';
-import { logAudit } from '../utils/logger.js';
+import { handleDbError } from '../utils/logger.js';
 
 export const exportSql = async (req, res) => {
-  const ipAddress = req.ip || req.connection.remoteAddress;
   try {
     const tables = [
       'roles', 'users', 'settings', 'slider_images', 'service_categories',
@@ -23,7 +22,6 @@ export const exportSql = async (req, res) => {
       sqlDump += `-- Table structure and data for table: ${table}\n`;
       sqlDump += `-- ------------------------------------------------------------\n`;
       
-      // Get Create Table
       try {
         const [[showCreateTable]] = await pool.query(`SHOW CREATE TABLE \`${table}\``);
         sqlDump += `${showCreateTable['Create Table']};\n\n`;
@@ -32,7 +30,6 @@ export const exportSql = async (req, res) => {
         continue;
       }
 
-      // Get Table Data
       const [rows] = await pool.query(`SELECT * FROM \`${table}\``);
       if (rows.length > 0) {
         sqlDump += `INSERT INTO \`${table}\` VALUES \n`;
@@ -49,61 +46,49 @@ export const exportSql = async (req, res) => {
       }
     }
 
-    await logAudit(req.user?.id, 'EXPORT_DATABASE_SQL', 'database', 'Database SQL dump generated', ipAddress);
-
     res.setHeader('Content-disposition', `attachment; filename=georsontech_backup_${Date.now()}.sql`);
     res.setHeader('Content-type', 'text/plain');
     res.charset = 'UTF-8';
     res.write(sqlDump);
     return res.end();
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to generate database SQL export' });
+    return handleDbError(error, 'Failed to generate database SQL export', res);
   }
 };
 
 export const restoreSql = async (req, res) => {
   const { sqlString } = req.body;
-  const ipAddress = req.ip || req.connection.remoteAddress;
 
   if (!sqlString) {
     return res.status(400).json({ message: 'SQL script is required for restoration' });
   }
 
+  let connection;
   try {
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    try {
-      // Split the script into separate statements (this is a simple parser)
-      const statements = sqlString
-        .split(/;\s*$/m)
-        .map(s => s.trim())
-        .filter(s => s.length > 0 && !s.startsWith('--'));
+    const statements = sqlString
+      .split(/;\s*$/m)
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.startsWith('--'));
 
-      for (const statement of statements) {
-        await connection.query(statement);
-      }
-
-      await connection.commit();
-      await logAudit(req.user?.id, 'RESTORE_DATABASE_SQL', 'database', 'Database state restored from SQL script', ipAddress);
-
-      return res.json({ message: 'Database restored successfully' });
-    } catch (err) {
-      await connection.rollback();
-      throw err;
-    } finally {
-      connection.release();
+    for (const statement of statements) {
+      await connection.query(statement);
     }
+
+    await connection.commit();
+    return res.json({ message: 'Database restored successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Database restoration failed. Check script syntax.' });
+    if (connection) await connection.rollback();
+    return handleDbError(error, 'Database restoration failed. Check script syntax.', res);
+  } finally {
+    if (connection) connection.release();
   }
 };
 
 export const exportCsv = async (req, res) => {
   const { table } = req.params;
-  const ipAddress = req.ip || req.connection.remoteAddress;
   const allowedTables = ['enquiries', 'career_applications', 'visitor_logs', 'audit_logs', 'login_history'];
 
   if (!allowedTables.includes(table)) {
@@ -124,14 +109,11 @@ export const exportCsv = async (req, res) => {
         let val = row[header];
         if (val === null) return '';
         if (typeof val === 'object') val = JSON.stringify(val);
-        // Escape quotes
         val = String(val).replace(/"/g, '""');
         return `"${val}"`;
       });
       csvString += csvRow.join(',') + '\n';
     });
-
-    await logAudit(req.user?.id, `EXPORT_TABLE_CSV`, table, `Exported ${table} table as CSV`, ipAddress);
 
     res.setHeader('Content-disposition', `attachment; filename=${table}_export_${Date.now()}.csv`);
     res.setHeader('Content-type', 'text/csv');
@@ -139,7 +121,6 @@ export const exportCsv = async (req, res) => {
     res.write(csvString);
     return res.end();
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: `Failed to export table ${table} to CSV` });
+    return handleDbError(error, `Failed to export table ${table} to CSV`, res);
   }
 };

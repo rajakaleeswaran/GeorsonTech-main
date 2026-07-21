@@ -8,12 +8,17 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   FaLock, FaChartBar, FaFileAlt, FaBriefcase, FaBox, FaRss,
-  FaSignOutAlt, FaTimes, FaBuilding, FaGlobe, FaCog, FaCogs, FaImages
+  FaSignOutAlt, FaTimes, FaBuilding, FaGlobe, FaCog, FaCogs, FaImages,
+  FaEnvelope, FaPhone, FaDownload, FaCopy, FaExternalLinkAlt
 } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import '../styles/Admin.css';
 
-// State hook
 import useAdminState from '../hooks/useAdminState';
+import { getAssetUrl } from '../lib/api';
+import LogoImg from '../assets/Logo/Georson.png';
+
+
 
 // Tab Sub-Components
 import DashboardTab from '../components/Admin/DashboardTab';
@@ -42,8 +47,10 @@ function Admin() {
       <div className="admin-page">
         {!admin.isAuthenticated ? (
           <div className="admin-login-card">
+            <img src={LogoImg} alt="Georson Tech" className="admin-login-logo" />
             <h2 className="admin-login-title">Dynamic CMS Panel</h2>
-            <p className="admin-login-subtitle">Authenticate to adjust theme styling, slider layouts, offices, and dynamic analytics.</p>
+            <p className="admin-login-subtitle">Authenticate to adjust services, products, industries, media, and settings.</p>
+
             
             <form onSubmit={admin.handleLoginSubmit}>
               <div className="form-group">
@@ -309,46 +316,209 @@ function Admin() {
           </div>
         )}
 
-        {/* Modal Inspector pop-up */}
-        {admin.viewItem && (
-          <div className="admin-modal-overlay">
-            <div className="admin-modal-content">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Inspection View</h3>
-                <button style={{ fontSize: '18px', border: 'none', background: 'none', cursor: 'pointer' }} onClick={() => admin.setViewItem(null)}><FaTimes /></button>
-              </div>
+        {/* Modal Inspector Pop-up */}
+        {admin.viewItem && (() => {
+          const item = admin.viewItem;
+          const isEnquiry = !!item.subject;
+          const resumeUrl = item.resume_path ? getAssetUrl(item.resume_path, 'resume') : null;
 
-              {admin.viewItem.subject ? (
-                <div>
-                  <p><strong>Name:</strong> {admin.viewItem.name}</p>
-                  <p><strong>Company:</strong> {admin.viewItem.company || 'N/A'}</p>
-                  <p><strong>Email:</strong> {admin.viewItem.email}</p>
-                  <p><strong>Phone:</strong> {admin.viewItem.phone}</p>
-                  <p><strong>IP Address:</strong> <code>{admin.viewItem.ip_address}</code></p>
-                  <p><strong>Interested In:</strong> {admin.viewItem.service_interested}</p>
-                  <p><strong>Subject:</strong> {admin.viewItem.subject}</p>
-                  <p style={{ marginTop: '14px' }}><strong>Message Content:</strong></p>
-                  <div style={{ background: '#f3f4f6', padding: '14px', borderRadius: '6px', fontSize: '13.5px', whiteSpace: 'pre-line' }}>
-                    {admin.viewItem.message}
+          return (
+            <div className="admin-modal-overlay" onClick={() => admin.setViewItem(null)}>
+              <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
+                
+                {/* Modal Header */}
+                <div className="modal-header">
+                  <div className="modal-title-group">
+                    <div className="modal-title-icon">
+                      {isEnquiry ? <FaFileAlt /> : <FaBriefcase />}
+                    </div>
+                    <div>
+                      <span className={`modal-badge ${isEnquiry ? 'enquiry' : 'career'}`}>
+                        {isEnquiry ? 'Form Enquiry' : 'Job Candidate Application'}
+                      </span>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+                        {item.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <button className="modal-close-btn" onClick={() => admin.setViewItem(null)}>
+                    <FaTimes />
+                  </button>
+                </div>
+
+                {/* Data Grid */}
+                <div className="modal-data-grid">
+                  <div className="data-item">
+                    <span className="data-label">Full Name</span>
+                    <span className="data-value">{item.name}</span>
+                  </div>
+
+                  <div className="data-item">
+                    <span className="data-label">Email Address</span>
+                    <span className="data-value">
+                      <a href={`mailto:${item.email}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <FaEnvelope style={{ fontSize: '12px' }} /> {item.email}
+                      </a>
+                    </span>
+                  </div>
+
+                  <div className="data-item">
+                    <span className="data-label">Phone Number</span>
+                    <span className="data-value">
+                      <a href={`tel:${item.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <FaPhone style={{ fontSize: '12px' }} /> {item.phone || 'N/A'}
+                      </a>
+                    </span>
+                  </div>
+
+                  {isEnquiry ? (
+                    <>
+                      <div className="data-item">
+                        <span className="data-label">Company</span>
+                        <span className="data-value">{item.company || 'N/A'}</span>
+                      </div>
+                      <div className="data-item">
+                        <span className="data-label">Service Interested</span>
+                        <span className="data-value" style={{ color: '#0093DD' }}>{item.service_interested || 'General Inquiry'}</span>
+                      </div>
+                      <div className="data-item">
+                        <span className="data-label">Subject</span>
+                        <span className="data-value">{item.subject}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="data-item">
+                        <span className="data-label">Qualification</span>
+                        <span className="data-value">{item.qualification || 'N/A'}</span>
+                      </div>
+                      <div className="data-item">
+                        <span className="data-label">Experience</span>
+                        <span className="data-value" style={{ color: '#0093DD' }}>{item.experience || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="data-item">
+                    <span className="data-label">IP Address</span>
+                    <span className="data-value">
+                      <code style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                        {item.ip_address || '127.0.0.1'}
+                      </code>
+                    </span>
+                  </div>
+
+                  <div className="data-item">
+                    <span className="data-label">Status</span>
+                    <span className="data-value">
+                      <span className={`status-badge ${item.status === 'Contacted' ? 'publish' : item.status === 'Closed' ? 'draft' : 'pending'}`}>
+                        {item.status || 'Pending'}
+                      </span>
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <p><strong>Candidate:</strong> {admin.viewItem.name}</p>
-                  <p><strong>Email:</strong> {admin.viewItem.email}</p>
-                  <p><strong>Phone:</strong> {admin.viewItem.phone}</p>
-                  <p><strong>IP Address:</strong> <code>{admin.viewItem.ip_address}</code></p>
-                  <p><strong>Qualification:</strong> {admin.viewItem.qualification}</p>
-                  <p><strong>Experience:</strong> {admin.viewItem.experience}</p>
-                  <p style={{ marginTop: '14px' }}><strong>Cover Letter:</strong></p>
-                  <div style={{ background: '#f3f4f6', padding: '14px', borderRadius: '6px', fontSize: '13.5px', whiteSpace: 'pre-line' }}>
-                    {admin.viewItem.cover_letter || 'None provided'}
+
+                {/* Content Box (Message or Cover Letter) */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                      {isEnquiry ? 'Message Content' : 'Cover Letter'}
+                    </span>
+                    <button 
+                      style={{ background: 'none', border: 'none', color: '#0093DD', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(isEnquiry ? item.message : (item.cover_letter || ''));
+                        toast.success('Copied to clipboard!');
+                      }}
+                    >
+                      <FaCopy /> Copy Text
+                    </button>
+                  </div>
+                  <div className="modal-message-box">
+                    {isEnquiry ? item.message : (item.cover_letter || 'No cover letter provided by candidate.')}
                   </div>
                 </div>
-              )}
+
+                {/* Resume Attachment Card for Candidates */}
+                {!isEnquiry && (
+                  <div className="resume-attachment-card">
+                    <div className="resume-info">
+                      <FaFileAlt className="resume-icon" />
+                      <div>
+                        <div className="resume-filename">Candidate Resume Document</div>
+                        <div style={{ fontSize: '12px', color: '#16a34a' }}>
+                          {item.resume_path ? item.resume_path.split('/').pop() : 'No file attached'}
+                        </div>
+                      </div>
+                    </div>
+                    {resumeUrl ? (
+                      <div className="resume-actions">
+                        <a 
+                          href={resumeUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          download
+                          className="btn-primary" 
+                          style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#16a34a', borderColor: '#16a34a' }}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            if (item.resume_path.startsWith('http') || item.resume_path.startsWith('data:')) {
+                              window.open(resumeUrl, '_blank');
+                              return;
+                            }
+                            try {
+                              const check = await fetch(resumeUrl, { method: 'HEAD' });
+                              if (check.ok) {
+                                window.open(resumeUrl, '_blank');
+                              } else {
+                                const fname = item.resume_path.split('/').pop();
+                                toast.error(`⚠️ File "${fname}" is unavailable on server.`);
+                                if (item.email && window.confirm(`File unavailable on server. Send email request to ${item.email}?`)) {
+                                  window.location.href = `mailto:${item.email}?subject=Resume%20Re-submission%20Request&body=Hi%20${encodeURIComponent(item.name)},%0A%0AWe%20received%20your%20job%20application.%20Please%20reply%20with%20your%20resume/CV%20attached.%0A%0ABest%20regards,%0AGeorson%20Tech%20HR`;
+                                }
+                              }
+                            } catch (_) { window.open(resumeUrl, '_blank'); }
+                          }}
+                        >
+                          <FaDownload /> Download
+                        </a>
+                        <a 
+                          href={resumeUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn-outline" 
+                          style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#15803d', borderColor: '#86efac' }}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            if (item.resume_path.startsWith('http') || item.resume_path.startsWith('data:')) {
+                              window.open(resumeUrl, '_blank');
+                              return;
+                            }
+                            try {
+                              const check = await fetch(resumeUrl, { method: 'HEAD' });
+                              if (check.ok) {
+                                window.open(resumeUrl, '_blank');
+                              } else {
+                                const fname = item.resume_path.split('/').pop();
+                                toast.error(`⚠️ File "${fname}" is unavailable on server.`);
+                              }
+                            } catch (_) { window.open(resumeUrl, '_blank'); }
+                          }}
+                        >
+                          <FaExternalLinkAlt /> Open
+                        </a>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>File unavailable</span>
+                    )}
+                  </div>
+                )}
+
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
 
       </div>
     </>

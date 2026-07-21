@@ -38,12 +38,16 @@ function Products() {
 
   const filtered = useMemo(() => {
     return products.filter(p => {
+      if (!p) return false;
       const matchCat = activeCategory === "All" || p.category_name === activeCategory;
-      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const prodName = (p.name || p.title || "").toLowerCase();
+      const prodDesc = (p.description || p.short_description || "").toLowerCase();
+      const matchSearch = prodName.includes(searchQuery.toLowerCase()) ||
+                          prodDesc.includes(searchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
   }, [activeCategory, searchQuery, products]);
+
 
   return (
     <>

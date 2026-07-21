@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Custom slugify helper to avoid external dependency
 const slugify = (text) => {
@@ -8,8 +9,8 @@ const slugify = (text) => {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-    .replace(/\-\-+/g, '-');        // Replace multiple - with single -
+    .replace(/[^\w-]+/g, '')        // Remove all non-word chars
+    .replace(/--+/g, '-');          // Replace multiple - with single -
 };
 
 // Resolve file paths backslashes to forward slashes for cross-platform robustness
@@ -17,14 +18,12 @@ const normalizePath = (p) => p ? p.replace(/\\/g, '/') : null;
 
 // Helper to update associations in junction tables
 async function updateAssociations(connection, solutionId, industryIds, productIds) {
-  // Update Industries junction
   await connection.query('DELETE FROM solution_industries WHERE solution_id = ?', [solutionId]);
   if (Array.isArray(industryIds) && industryIds.length > 0) {
     const values = industryIds.map(indId => [solutionId, parseInt(indId)]);
     await connection.query('INSERT INTO solution_industries (solution_id, industry_id) VALUES ?', [values]);
   }
 
-  // Update Products junction
   await connection.query('DELETE FROM solution_products WHERE solution_id = ?', [solutionId]);
   if (Array.isArray(productIds) && productIds.length > 0) {
     const values = productIds.map(prodId => [solutionId, parseInt(prodId)]);
@@ -39,8 +38,7 @@ export const getSolutionCategories = async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM solution_categories ORDER BY sort_order ASC, id ASC');
     return res.json(rows);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve solution categories' });
+    return handleDbError(error, 'Failed to retrieve solution categories', res);
   }
 };
 
@@ -74,7 +72,6 @@ export const getSolutions = async (req, res) => {
 
     const [rows] = await pool.query(query, params);
 
-    // For each solution, fetch associated industry and product IDs
     const solutionsWithAssociations = await Promise.all(rows.map(async (sol) => {
       const [industries] = await pool.query('SELECT industry_id FROM solution_industries WHERE solution_id = ?', [sol.id]);
       const [products] = await pool.query('SELECT product_id FROM solution_products WHERE solution_id = ?', [sol.id]);
@@ -87,8 +84,7 @@ export const getSolutions = async (req, res) => {
 
     return res.json(solutionsWithAssociations);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve solutions list' });
+    return handleDbError(error, 'Failed to retrieve solutions list', res);
   }
 };
 
@@ -127,8 +123,7 @@ export const getSolutionBySlug = async (req, res) => {
       products
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve solution detail' });
+    return handleDbError(error, 'Failed to retrieve solution detail', res);
   }
 };
 
@@ -146,8 +141,7 @@ export const createSolutionCategory = async (req, res) => {
     );
     return res.json({ message: 'Solution category created' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create solution category' });
+    return handleDbError(error, 'Failed to create solution category', res);
   }
 };
 
@@ -164,8 +158,7 @@ export const updateSolutionCategory = async (req, res) => {
     );
     return res.json({ message: 'Solution category updated' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update category' });
+    return handleDbError(error, 'Failed to update category', res);
   }
 };
 
@@ -175,14 +168,14 @@ export const deleteSolutionCategory = async (req, res) => {
     await pool.query('DELETE FROM solution_categories WHERE id = ?', [id]);
     return res.json({ message: 'Solution category deleted' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to delete category' });
+    return handleDbError(error, 'Failed to delete category', res);
   }
 };
 
 export const createSolution = async (req, res) => {
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
     const { category_id, name, slug, description, icon, service_descriptions, sort_order, status, industry_ids, product_ids } = req.body;
@@ -199,7 +192,6 @@ export const createSolution = async (req, res) => {
 
     const solutionId = result.insertId;
 
-    // Parse industry and product IDs if received as string
     const parsedIndIds = typeof industry_ids === 'string' ? JSON.parse(industry_ids) : industry_ids;
     const parsedProdIds = typeof product_ids === 'string' ? JSON.parse(product_ids) : product_ids;
 
@@ -208,17 +200,17 @@ export const createSolution = async (req, res) => {
     await connection.commit();
     return res.json({ message: 'Solution successfully created', id: solutionId });
   } catch (error) {
-    await connection.rollback();
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create solution' });
+    if (connection) await connection.rollback();
+    return handleDbError(error, 'Failed to create solution', res);
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 };
 
 export const updateSolution = async (req, res) => {
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    connection = await pool.getConnection();
     await connection.beginTransaction();
     const { id } = req.params;
     const { category_id, name, slug, description, icon, service_descriptions, sort_order, status, industry_ids, product_ids } = req.body;
@@ -250,11 +242,10 @@ export const updateSolution = async (req, res) => {
     await connection.commit();
     return res.json({ message: 'Solution successfully updated' });
   } catch (error) {
-    await connection.rollback();
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update solution' });
+    if (connection) await connection.rollback();
+    return handleDbError(error, 'Failed to update solution', res);
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 };
 
@@ -264,7 +255,6 @@ export const deleteSolution = async (req, res) => {
     await pool.query('DELETE FROM solutions WHERE id = ?', [id]);
     return res.json({ message: 'Solution deleted successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to delete solution' });
+    return handleDbError(error, 'Failed to delete solution', res);
   }
 };

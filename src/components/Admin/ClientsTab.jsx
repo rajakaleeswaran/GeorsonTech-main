@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React, { useState } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaSort } from 'react-icons/fa';
 
@@ -159,7 +160,7 @@ function ClientsTab({
               {filteredClients.map(c => (
                 <tr key={c.id}>
                   <td>
-                    <img src={c.logo_path ? `http://localhost:5000/${c.logo_path}` : ''} alt="" style={{ height: '36px', objectFit: 'contain', maxWidth: '80px' }} />
+                    <img src={c.logo_path ? getAssetUrl(c.logo_path) : ''} alt="" style={{ height: '36px', objectFit: 'contain', maxWidth: '80px' }} />
                   </td>
                   <td>{c.name}</td>
                   <td>

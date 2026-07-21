@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -111,7 +112,7 @@ function ProductsTab({
                 {products.map(p => (
                   <tr key={p.id}>
                     <td>
-                      <img src={p.image_path ? `http://localhost:5000/${p.image_path}` : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <img src={p.image_path ? getAssetUrl(p.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                     </td>
                     <td>{p.name}</td>
                     <td>{p.category_name}</td>

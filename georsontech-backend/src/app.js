@@ -1,3 +1,16 @@
+/**
+ * @file app.js
+ * @description Main Express application entry point for the Georson Tech backend API.
+ * Configures middleware, mounts public and protected routes, and starts the server.
+ *
+ * Architecture:
+ *  - Public routes  → No authentication required
+ *  - Admin routes   → Protected by authenticateToken + authorizeRoles middleware
+ *  - MySQL offline  → Controllers return graceful fallback responses (no 500 crash)
+ *
+ * Port: 5000 (override via PORT env variable)
+ */
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,15 +20,31 @@ import { fileURLToPath } from 'url';
 
 import pool from './config/db.js';
 
-// Route controller imports
+// ─── CONTROLLER IMPORTS ───────────────────────────────────────────────────────
 import { login, refreshToken, logout } from './controllers/authController.js';
-import { createEnquiry, createCareerApplication, getEnquiries, getCareerApplications, updateEnquiryStatus, updateCareerStatus } from './controllers/enquiryController.js';
-import { getProducts, getProductCategories, createProduct, updateProduct, deleteProduct, createProductCategory, updateProductCategory, deleteProductCategory } from './controllers/productController.js';
-import { getBlogs, getBlogBySlug, getBlogCategories, createBlog, updateBlog, deleteBlog, createBlogCategory, updateBlogCategory, deleteBlogCategory } from './controllers/blogController.js';
+import {
+  createEnquiry, createCareerApplication,
+  getEnquiries, getCareerApplications,
+  updateEnquiryStatus, updateCareerStatus
+} from './controllers/enquiryController.js';
+import {
+  getProducts, getProductCategories,
+  createProduct, updateProduct, deleteProduct,
+  createProductCategory, updateProductCategory, deleteProductCategory
+} from './controllers/productController.js';
+import {
+  getBlogs, getBlogBySlug, getBlogCategories,
+  createBlog, updateBlog, deleteBlog,
+  createBlogCategory, updateBlogCategory, deleteBlogCategory
+} from './controllers/blogController.js';
 import { getServices, getServiceBySlug, createService, updateService, deleteService } from './controllers/serviceController.js';
 import { getIndustries, getIndustryBySlug, createIndustry, updateIndustry, deleteIndustry } from './controllers/industryController.js';
 import { getClients, createClient, updateClient, deleteClient } from './controllers/clientController.js';
-import { getSolutions, getSolutionBySlug, getSolutionCategories, createSolution, updateSolution, deleteSolution, createSolutionCategory, updateSolutionCategory, deleteSolutionCategory } from './controllers/solutionController.js';
+import {
+  getSolutions, getSolutionBySlug, getSolutionCategories,
+  createSolution, updateSolution, deleteSolution,
+  createSolutionCategory, updateSolutionCategory, deleteSolutionCategory
+} from './controllers/solutionController.js';
 import { getSettings, updateSettings } from './controllers/settingsController.js';
 import { getLocations, createLocation, updateLocation, deleteLocation } from './controllers/locationController.js';
 import { getMedia, uploadMedia, deleteMedia } from './controllers/mediaController.js';
@@ -23,20 +52,26 @@ import { trackVisitor, getVisitorStats } from './controllers/visitorController.j
 import { exportSql, restoreSql, exportCsv } from './controllers/backupController.js';
 import { globalSearch } from './controllers/searchController.js';
 
-// Middleware imports
+// ─── MIDDLEWARE IMPORTS ───────────────────────────────────────────────────────
 import { authenticateToken, authorizeRoles } from './middleware/auth.js';
 import upload from './middleware/upload.js';
 
+// ─── APP SETUP ────────────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security and utility Middlewares
-app.use(helmet({
-  crossOriginResourcePolicy: false // Allow serving files globally
-}));
+// Role constants — must match roles stored in DB and the auth middleware DEV_USER
+const R_SUPER       = 'SUPER ADMIN';
+const R_WEBSITE     = 'Website Admin';
+const R_SALES       = 'Sales';
+const R_HR          = 'HR';
+const R_MARKETING   = 'Digital Marketing';
+
+// ─── SECURITY MIDDLEWARE ──────────────────────────────────────────────────────
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -47,52 +82,53 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve Uploaded Files
+// Serve uploaded files (images, brochures, resumes)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Rate Limiter
+// Rate limiting — 1000 requests per 15 minutes per IP
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Upgraded max requests for dynamic site interaction
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' }
 });
 app.use('/api/', apiLimiter);
 
-// ─── PUBLIC ROUTES ───
+// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
+// No authentication required for these endpoints
 
-// 1. Auth routes
+// Auth
 app.post('/api/auth/login', login);
 app.post('/api/auth/refresh', refreshToken);
 app.post('/api/auth/logout', logout);
 
-// 2. Public enquiries & career application
+// Contact & Career forms
 app.post('/api/enquiry', createEnquiry);
 app.post('/api/career', upload.single('resume'), createCareerApplication);
 
-// 3. Catalog Products
+// Products catalog (public listing)
 app.get('/api/products', getProducts);
 app.get('/api/products/categories', getProductCategories);
 
-// 4. Blog articles
+// Blog articles
 app.get('/api/blogs', getBlogs);
 app.get('/api/blogs/categories', getBlogCategories);
 app.get('/api/blogs/:slug', getBlogBySlug);
 
-// 5. Website Settings (public logo, colors, meta parameters)
+// Website settings (logo, colors, meta)
 app.get('/api/settings', getSettings);
 
-// 6. Dynamic Office Locations
+// Office locations
 app.get('/api/locations', getLocations);
 
-// 7. Global Search
+// Global search
 app.get('/api/search', globalSearch);
 
-// 8. Visitor Logs
+// Visitor tracking (anonymous page hits)
 app.post('/api/visitor/track', trackVisitor);
 
-// 9. Public Services, Industries & Clients
+// Services, Industries, Clients, Solutions (public)
 app.get('/api/services', getServices);
 app.get('/api/services/:slug', getServiceBySlug);
 app.get('/api/industries', getIndustries);
@@ -102,30 +138,37 @@ app.get('/api/solutions', getSolutions);
 app.get('/api/solutions/categories', getSolutionCategories);
 app.get('/api/solutions/:slug', getSolutionBySlug);
 
-
-// ─── ADMIN PROTECTED ROUTES ───
+// ─── ADMIN PROTECTED ROUTES ───────────────────────────────────────────────────
+// All routes under /api/admin require a valid Bearer token
 const adminRouter = express.Router();
 adminRouter.use(authenticateToken);
 
-// Admin dashboard analytical metrics (includes counts, recent list entries)
+// Dashboard: aggregate metrics from all collections
 adminRouter.get('/dashboard', async (req, res) => {
   try {
-    const [[enquiriesCount]] = await pool.query('SELECT COUNT(*) as count FROM enquiries');
-    const [[careersCount]] = await pool.query('SELECT COUNT(*) as count FROM career_applications');
-    const [[productsCount]] = await pool.query('SELECT COUNT(*) as count FROM products');
-    const [[categoriesCount]] = await pool.query('SELECT COUNT(*) as count FROM product_categories');
-    const [[blogsCount]] = await pool.query('SELECT COUNT(*) as count FROM blogs');
-    const [[servicesCount]] = await pool.query('SELECT COUNT(*) as count FROM services');
-    const [[industriesCount]] = await pool.query('SELECT COUNT(*) as count FROM industries');
-    const [[clientsCount]] = await pool.query('SELECT COUNT(*) as count FROM clients');
-    const [[solutionsCount]] = await pool.query('SELECT COUNT(*) as count FROM solutions');
-    const [[visitorsCount]] = await pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs');
-    const [[todayVisitorsCount]] = await pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs WHERE DATE(created_at) = CURDATE()');
-    
-    // Recent activities (5 items)
-    const [recentEnquiries] = await pool.query('SELECT name, subject, status, created_at FROM enquiries ORDER BY created_at DESC LIMIT 5');
-    const [recentCareers] = await pool.query('SELECT name, qualification, status, created_at FROM career_applications ORDER BY created_at DESC LIMIT 5');
-    
+    // Run all count queries in parallel for performance
+    const [
+      [[enquiriesCount]], [[careersCount]], [[productsCount]],
+      [[categoriesCount]], [[blogsCount]], [[servicesCount]],
+      [[industriesCount]], [[clientsCount]], [[solutionsCount]],
+      [[visitorsCount]], [[todayVisitorsCount]],
+      [recentEnquiries], [recentCareers]
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) as count FROM enquiries'),
+      pool.query('SELECT COUNT(*) as count FROM career_applications'),
+      pool.query('SELECT COUNT(*) as count FROM products'),
+      pool.query('SELECT COUNT(*) as count FROM product_categories'),
+      pool.query('SELECT COUNT(*) as count FROM blogs'),
+      pool.query('SELECT COUNT(*) as count FROM services'),
+      pool.query('SELECT COUNT(*) as count FROM industries'),
+      pool.query('SELECT COUNT(*) as count FROM clients'),
+      pool.query('SELECT COUNT(*) as count FROM solutions'),
+      pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs'),
+      pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs WHERE DATE(created_at) = CURDATE()'),
+      pool.query('SELECT name, subject, status, created_at FROM enquiries ORDER BY created_at DESC LIMIT 5'),
+      pool.query('SELECT name, qualification, status, created_at FROM career_applications ORDER BY created_at DESC LIMIT 5')
+    ]);
+
     return res.json({
       metrics: {
         enquiries: enquiriesCount.count,
@@ -144,102 +187,127 @@ adminRouter.get('/dashboard', async (req, res) => {
       recentCareers
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to build analytics dashboard metrics' });
+    console.error('[dashboard] MySQL offline or query failed:', error.message);
+    // Return empty metrics instead of 500 so the frontend dashboard still renders
+    return res.json({
+      metrics: {
+        enquiries: 0, applications: 0, products: 0, categories: 0,
+        blogs: 0, services: 0, industries: 0, clients: 0,
+        solutions: 0, totalVisitors: 0, todayVisitors: 0
+      },
+      recentEnquiries: [],
+      recentCareers: []
+    });
   }
 });
 
-// Admin Settings updates (Super Admin only)
-adminRouter.put('/settings', authorizeRoles('Super Admin'), updateSettings);
+// Settings (Super Admin only)
+adminRouter.put('/settings', authorizeRoles(R_SUPER), updateSettings);
 
-// Admin Locations CRUD
-adminRouter.post('/locations', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), createLocation);
-adminRouter.put('/locations/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), updateLocation);
-adminRouter.delete('/locations/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteLocation);
+// Office Locations CRUD
+adminRouter.post('/locations', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), createLocation);
+adminRouter.put('/locations/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), updateLocation);
+adminRouter.delete('/locations/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteLocation);
 
-// Admin listings and status update for forms
-adminRouter.get('/enquiries', authorizeRoles('Super Admin', 'Website Admin', 'Sales'), getEnquiries);
-adminRouter.put('/enquiries/:id/status', authorizeRoles('Super Admin', 'Website Admin', 'Sales'), updateEnquiryStatus);
+// Enquiries (read + status update)
+adminRouter.get('/enquiries', authorizeRoles(R_SUPER, R_WEBSITE, R_SALES), getEnquiries);
+adminRouter.put('/enquiries/:id/status', authorizeRoles(R_SUPER, R_WEBSITE, R_SALES), updateEnquiryStatus);
 
-adminRouter.get('/careers', authorizeRoles('Super Admin', 'HR'), getCareerApplications);
-adminRouter.put('/careers/:id/status', authorizeRoles('Super Admin', 'HR'), updateCareerStatus);
+// Career Applications
+adminRouter.get('/careers', authorizeRoles(R_SUPER, R_HR), getCareerApplications);
+adminRouter.put('/careers/:id/status', authorizeRoles(R_SUPER, R_HR), updateCareerStatus);
 
-// Admin CRUD Products
-adminRouter.post('/products', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), createProduct);
-adminRouter.put('/products/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateProduct);
-adminRouter.delete('/products/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteProduct);
+// Products CRUD
+adminRouter.post('/products', authorizeRoles(R_SUPER, R_WEBSITE), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), createProduct);
+adminRouter.put('/products/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateProduct);
+adminRouter.delete('/products/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteProduct);
 
-// Admin CRUD Product Categories
-adminRouter.post('/products/categories', authorizeRoles('Super Admin', 'Website Admin'), createProductCategory);
-adminRouter.put('/products/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), updateProductCategory);
-adminRouter.delete('/products/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteProductCategory);
+// Product Categories CRUD
+adminRouter.post('/products/categories', authorizeRoles(R_SUPER, R_WEBSITE), createProductCategory);
+adminRouter.put('/products/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE), updateProductCategory);
+adminRouter.delete('/products/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteProductCategory);
 
-// Admin CRUD Blog articles
-adminRouter.post('/blogs', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), upload.single('featured_image'), createBlog);
-adminRouter.put('/blogs/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), upload.single('featured_image'), updateBlog);
-adminRouter.delete('/blogs/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), deleteBlog);
+// Blog Articles CRUD
+adminRouter.post('/blogs', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), upload.single('featured_image'), createBlog);
+adminRouter.put('/blogs/:id', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), upload.single('featured_image'), updateBlog);
+adminRouter.delete('/blogs/:id', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), deleteBlog);
 
-// Admin CRUD Blog Categories
-adminRouter.post('/blogs/categories', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), createBlogCategory);
-adminRouter.put('/blogs/categories/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), updateBlogCategory);
-adminRouter.delete('/blogs/categories/:id', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), deleteBlogCategory);
+// Blog Categories CRUD
+adminRouter.post('/blogs/categories', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), createBlogCategory);
+adminRouter.put('/blogs/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), updateBlogCategory);
+adminRouter.delete('/blogs/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), deleteBlogCategory);
 
-// Admin CRUD Services
-adminRouter.get('/services', authorizeRoles('Super Admin', 'Website Admin'), getServices);
-adminRouter.post('/services', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), createService);
-adminRouter.put('/services/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateService);
-adminRouter.delete('/services/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteService);
+// Services CRUD
+adminRouter.get('/services', authorizeRoles(R_SUPER, R_WEBSITE), getServices);
+adminRouter.post('/services', authorizeRoles(R_SUPER, R_WEBSITE), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), createService);
+adminRouter.put('/services/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'brochure', maxCount: 1 }]), updateService);
+adminRouter.delete('/services/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteService);
 
-// Admin CRUD Industries
-adminRouter.get('/industries', authorizeRoles('Super Admin', 'Website Admin'), getIndustries);
-adminRouter.post('/industries', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), createIndustry);
-adminRouter.put('/industries/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), updateIndustry);
-adminRouter.delete('/industries/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteIndustry);
+// Industries CRUD
+adminRouter.get('/industries', authorizeRoles(R_SUPER, R_WEBSITE), getIndustries);
+adminRouter.post('/industries', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), createIndustry);
+adminRouter.put('/industries/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), updateIndustry);
+adminRouter.delete('/industries/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteIndustry);
 
-// Admin CRUD Clients
-adminRouter.get('/clients', authorizeRoles('Super Admin', 'Website Admin'), getClients);
-adminRouter.post('/clients', authorizeRoles('Super Admin', 'Website Admin'), upload.single('logo'), createClient);
-adminRouter.put('/clients/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('logo'), updateClient);
-adminRouter.delete('/clients/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteClient);
+// Clients & Logos CRUD
+adminRouter.get('/clients', authorizeRoles(R_SUPER, R_WEBSITE), getClients);
+adminRouter.post('/clients', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('logo'), createClient);
+adminRouter.put('/clients/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('logo'), updateClient);
+adminRouter.delete('/clients/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteClient);
 
-// Admin CRUD Solutions & Categories
-adminRouter.post('/solutions', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), createSolution);
-adminRouter.put('/solutions/:id', authorizeRoles('Super Admin', 'Website Admin'), upload.single('image'), updateSolution);
-adminRouter.delete('/solutions/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteSolution);
-adminRouter.post('/solutions/categories', authorizeRoles('Super Admin', 'Website Admin'), createSolutionCategory);
-adminRouter.put('/solutions/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), updateSolutionCategory);
-adminRouter.delete('/solutions/categories/:id', authorizeRoles('Super Admin', 'Website Admin'), deleteSolutionCategory);
+// Solutions & Categories CRUD
+adminRouter.post('/solutions', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), createSolution);
+adminRouter.put('/solutions/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), updateSolution);
+adminRouter.delete('/solutions/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteSolution);
+adminRouter.post('/solutions/categories', authorizeRoles(R_SUPER, R_WEBSITE), createSolutionCategory);
+adminRouter.put('/solutions/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE), updateSolutionCategory);
+adminRouter.delete('/solutions/categories/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteSolutionCategory);
 
-// Admin Media Library
+// Media Library
 adminRouter.get('/media', getMedia);
 adminRouter.post('/media', upload.single('file'), uploadMedia);
 adminRouter.delete('/media/:id', deleteMedia);
 
-// Admin Database Backup controls (Super Admin only)
-adminRouter.get('/backup/export-sql', authorizeRoles('Super Admin'), exportSql);
-adminRouter.post('/backup/restore-sql', authorizeRoles('Super Admin'), restoreSql);
-adminRouter.get('/backup/export-csv/:table', authorizeRoles('Super Admin'), exportCsv);
+// Database Backup & Export (Super Admin only)
+adminRouter.get('/backup/export-sql', authorizeRoles(R_SUPER), exportSql);
+adminRouter.post('/backup/restore-sql', authorizeRoles(R_SUPER), restoreSql);
+adminRouter.get('/backup/export-csv/:table', authorizeRoles(R_SUPER), exportCsv);
 
-// Custom self-hosted visitor analytics reports
-adminRouter.get('/analytics/visitors', authorizeRoles('Super Admin', 'Website Admin', 'Digital Marketing'), getVisitorStats);
+// Visitor Analytics
+adminRouter.get('/analytics/visitors', authorizeRoles(R_SUPER, R_WEBSITE, R_MARKETING), getVisitorStats);
 
+// Mount admin router
 app.use('/api/admin', adminRouter);
 
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date() });
-});
+// ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'offline';
+  try {
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch (_) { /* MySQL not running */ }
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : {}
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    version: '1.0.0'
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+// ─── GLOBAL ERROR HANDLER ─────────────────────────────────────────────────────
+app.use((err, req, res, _next) => {
+  console.error('[error]', err.message);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
+
+// ─── START SERVER ─────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`✅ Georson Tech API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(`   Frontend origin: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+});
+
 export default app;
