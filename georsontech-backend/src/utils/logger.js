@@ -4,6 +4,8 @@
  * and prevent dumping full AggregateError stack traces into the Node.js terminal.
  */
 
+import pool from '../config/db.js';
+
 export function handleDbError(error, contextMessage, res = null, statusCode = 500) {
   const isConnRefused = 
     error?.code === 'ECONNREFUSED' || 
@@ -21,5 +23,16 @@ export function handleDbError(error, contextMessage, res = null, statusCode = 50
     if (res) {
       return res.status(statusCode).json({ message: contextMessage });
     }
+  }
+}
+
+export async function logLogin(userId, username, status, ipAddress, userAgent) {
+  try {
+    await pool.query(
+      'INSERT INTO login_history (user_id, username, status, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)',
+      [userId, username, status, ipAddress, userAgent]
+    );
+  } catch (error) {
+    console.error('Failed to log login attempt:', error);
   }
 }

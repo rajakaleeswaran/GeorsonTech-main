@@ -183,7 +183,44 @@ export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*'
  * Handle enquiry submission
  */
 export async function submitEnquiry(enquiryForm) {
-  // 1. Submit to Supabase directly (guarantees saving to Cloud DB)
+  let backendSuccess = false;
+
+  // 1. Try local Express backend first
+  try {
+    const res = await fetch(`${API_BASE}/enquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enquiryForm)
+    });
+    if (res.ok) {
+      backendSuccess = true;
+    }
+  } catch (err) {
+    console.log('Local backend is offline or failed during enquiry submission.');
+  }
+
+  if (backendSuccess) {
+    // Optionally log to Supabase in the background, but don't block success if it fails
+    try {
+      await supabase
+        .from('enquiries')
+        .insert([{
+          name: enquiryForm.name,
+          company: enquiryForm.company,
+          email: enquiryForm.email,
+          phone: enquiryForm.phone,
+          subject: enquiryForm.subject,
+          service_interested: enquiryForm.serviceInterested,
+          message: enquiryForm.message,
+          status: 'Pending'
+        }]);
+    } catch (e) {
+      console.log('Background Supabase sync failed:', e);
+    }
+    return { success: true };
+  }
+
+  // 2. If backend is offline/failed, fallback to Supabase as primary
   const { error } = await supabase
     .from('enquiries')
     .insert([{
@@ -198,17 +235,6 @@ export async function submitEnquiry(enquiryForm) {
     }]);
 
   if (error) throw error;
-
-  // 2. Submit to local backend if online (to trigger local Node SMTP emails)
-  try {
-    await fetch(`${API_BASE}/enquiry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(enquiryForm)
-    });
-  } catch (err) {
-    console.log('Local backend is offline; SMTP email not sent, but successfully stored in Supabase.');
-  }
 
   return { success: true };
 }
@@ -228,6 +254,7 @@ function fileToBase64(file) {
  */
 export async function submitCareerApplication(careerForm, resumeFile) {
   let resumePath = '';
+  let backendSuccess = false;
 
   if (resumeFile) {
     // 1. Generate Base64 Data URL as guaranteed cross-system fallback
@@ -278,10 +305,7 @@ export async function submitCareerApplication(careerForm, resumeFile) {
         method: 'POST',
         body: formData
       });
-    } catch (_) {}
-  }
 
-  // 5. Save record in Supabase career_applications table with universal resumePath
   const { error } = await supabase
     .from('career_applications')
     .insert([{
