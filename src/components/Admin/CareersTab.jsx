@@ -8,28 +8,36 @@ function CareersTab({
   changeCareerStatus,
   setViewItem
 }) {
-  const handleResumeDownload = async (e, resumePath, candidateName) => {
+  const handleResumeDownload = async (e, resumePath, candidateName, candidateEmail) => {
+    e.preventDefault();
+
     if (!resumePath) {
-      e.preventDefault();
       toast.warn(`No resume file attached for ${candidateName}.`);
       return;
     }
 
     const fileUrl = getAssetUrl(resumePath, 'resume');
 
-    // Verify file exists on server before navigating
-    if (!resumePath.startsWith('http')) {
-      try {
-        const res = await fetch(fileUrl, { method: 'HEAD' });
-        if (!res.ok) {
-          e.preventDefault();
-          const fileName = resumePath.split('/').pop();
-          toast.error(`⚠️ File "${fileName}" not found on storage server. Candidate: ${candidateName}`);
-          return;
+    // If it's a remote URL or data URL, open directly
+    if (resumePath.startsWith('http') || resumePath.startsWith('data:')) {
+      window.open(fileUrl, '_blank');
+      return;
+    }
+
+    // Check if local backend file exists
+    try {
+      const res = await fetch(fileUrl, { method: 'HEAD' });
+      if (res.ok) {
+        window.open(fileUrl, '_blank');
+      } else {
+        const fileName = resumePath.split('/').pop();
+        toast.error(`⚠️ Resume file "${fileName}" was submitted when server storage was offline.`);
+        if (candidateEmail && window.confirm(`File unavailable on server. Would you like to send an email request to ${candidateEmail}?`)) {
+          window.location.href = `mailto:${candidateEmail}?subject=Resume%20Re-submission%20Request&body=Hi%20${encodeURIComponent(candidateName)},%0A%0AWe%20received%20your%20job%20application%20at%20Georson%20Tech.%20Please%20reply%20to%20this%20email%20with%20your%20resume/CV%20attached.%0A%0ABest%20regards,%0AGeorson%20Tech%20HR`;
         }
-      } catch (_) {
-        // Cross-origin or network check skip — proceed to link target
       }
+    } catch (_) {
+      window.open(fileUrl, '_blank');
     }
   };
 
@@ -90,7 +98,7 @@ function CareersTab({
                           download
                           className="admin-action-btn admin-btn-edit" 
                           style={{ textDecoration: 'none', background: '#dcfce7', color: '#15803d' }}
-                          onClick={e => handleResumeDownload(e, c.resume_path, c.name)}
+                          onClick={e => handleResumeDownload(e, c.resume_path, c.name, c.email)}
                         >
                           <FaDownload /> Resume
                         </a>
