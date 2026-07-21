@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Public endpoints
 export const getIndustries = async (req, res) => {
@@ -16,8 +17,7 @@ export const getIndustries = async (req, res) => {
     const [industries] = await pool.query(query, params);
     return res.json(industries);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve industries' });
+    return handleDbError(error, 'Failed to retrieve industries', res);
   }
 };
 
@@ -30,7 +30,7 @@ export const getIndustryBySlug = async (req, res) => {
     }
     return res.json(industries[0]);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to retrieve industry' });
+    return handleDbError(error, 'Failed to retrieve industry', res);
   }
 };
 
@@ -52,8 +52,7 @@ export const createIndustry = async (req, res) => {
 
     return res.status(201).json({ message: 'Industry created successfully', industryId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create industry' });
+    return handleDbError(error, 'Failed to create industry', res);
   }
 };
 
@@ -79,8 +78,7 @@ export const updateIndustry = async (req, res) => {
 
     return res.json({ message: 'Industry updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update industry' });
+    return handleDbError(error, 'Failed to update industry', res);
   }
 };
 
@@ -93,6 +91,6 @@ export const deleteIndustry = async (req, res) => {
     }
     return res.json({ message: 'Industry deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete industry' });
+    return handleDbError(error, 'Failed to delete industry', res);
   }
 };

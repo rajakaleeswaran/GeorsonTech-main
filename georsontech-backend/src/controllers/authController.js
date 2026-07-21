@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Dev fallback credentials when MySQL is offline
 const DEV_CREDENTIALS = [
@@ -11,7 +12,6 @@ const DEV_TOKEN = 'dev-admin-token';
 
 export const login = async (req, res) => {
   const { username, password } = req.body;
-  const ipAddress = req.ip || req.connection?.remoteAddress;
 
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
@@ -47,8 +47,7 @@ export const login = async (req, res) => {
       });
     }
   } catch (dbErr) {
-    // MySQL offline, fall through to dev credentials
-    console.warn('MySQL offline – trying dev credentials fallback');
+    handleDbError(dbErr, 'MySQL login attempt', null);
   }
 
   // Fallback: dev credentials when MySQL is down
@@ -70,7 +69,6 @@ export const refreshToken = async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ message: 'Refresh token is required' });
 
-  // Dev token doesn't expire
   if (token === DEV_TOKEN) {
     return res.json({ accessToken: DEV_TOKEN });
   }
@@ -108,6 +106,6 @@ export const logout = async (req, res) => {
     await pool.query('DELETE FROM user_refresh_tokens WHERE token = ?', [token]);
     return res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    return res.json({ message: 'Logged out' }); // Non-critical
+    return res.json({ message: 'Logged out' });
   }
 };

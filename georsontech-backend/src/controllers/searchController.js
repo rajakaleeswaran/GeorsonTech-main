@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 export const globalSearch = async (req, res) => {
   const { query } = req.query;
@@ -52,7 +53,6 @@ export const globalSearch = async (req, res) => {
       ]
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Global search operation failed' });
+    return handleDbError(error, 'Global search operation failed', res);
   }
 };

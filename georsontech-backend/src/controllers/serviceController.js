@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { handleDbError } from '../utils/logger.js';
 
 // Public endpoints
 export const getServices = async (req, res) => {
@@ -24,8 +25,7 @@ export const getServices = async (req, res) => {
     const [services] = await pool.query(query, params);
     return res.json(services);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to retrieve services' });
+    return handleDbError(error, 'Failed to retrieve services', res);
   }
 };
 
@@ -38,7 +38,7 @@ export const getServiceBySlug = async (req, res) => {
     }
     return res.json(services[0]);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to retrieve service' });
+    return handleDbError(error, 'Failed to retrieve service', res);
   }
 };
 
@@ -61,8 +61,7 @@ export const createService = async (req, res) => {
 
     return res.status(201).json({ message: 'Service created successfully', serviceId: result.insertId });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create service' });
+    return handleDbError(error, 'Failed to create service', res);
   }
 };
 
@@ -89,8 +88,7 @@ export const updateService = async (req, res) => {
 
     return res.json({ message: 'Service updated successfully' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to update service' });
+    return handleDbError(error, 'Failed to update service', res);
   }
 };
 
@@ -103,6 +101,6 @@ export const deleteService = async (req, res) => {
     }
     return res.json({ message: 'Service deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete service' });
+    return handleDbError(error, 'Failed to delete service', res);
   }
 };
