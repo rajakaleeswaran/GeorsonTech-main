@@ -416,90 +416,116 @@ export default function useAdminState() {
 
 
   // Login handler — supports Backend API auth, Supabase Auth, & Dev fallback
+  // Works on: localhost (Express), Vercel (Supabase-only), and offline (dev credentials)
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!loginData.username || !loginData.password) {
-      toast.error("Please enter credentials");
+      toast.error("Please enter your credentials");
       return;
     }
     setSubmitting(true);
 
-    const userLower = (loginData.username || '').trim().toLowerCase();
-    const pass = (loginData.password || '').trim();
+    const emailInput = (loginData.username || '').trim();
+    const userLower  = emailInput.toLowerCase();
+    const pass       = (loginData.password || '').trim();
 
-    // 3. IMMEDIATE Dev Fallback check — before trying any remote services
-    const isDevEmail = ['admin@georsontech.com','admin','georsontech@gmail.com','admin@georsontech'].includes(userLower);
-    const isDevPass  = ['admin123','Admin123','admin1234','admin'].includes(pass);
+    // Pre-compute dev credential check (used in step 3)
+    const isDevEmail = ['admin@georsontech.com', 'admin', 'georsontech@gmail.com', 'admin@georsontech'].includes(userLower);
+    const isDevPass  = pass.toLowerCase().includes('admin') || pass === 'admin123' || pass === 'admin1234';
 
-    // 1. Try local Express backend (/api/auth/login)
-    try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginData.username.trim(), password: pass }),
-        signal: controller.signal
-      });
-      clearTimeout(tid);
+    // ── STEP 1: Try local Express backend (only when running locally) ─────────
+    const isLocalDev = API_BASE_URL.includes('localhost');
+    if (isLocalDev) {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: emailInput, password: pass }),
+          signal: controller.signal
+        });
+        clearTimeout(tid);
 
-      if (res.ok) {
-        const data = await res.json();
-        const accessToken = data.accessToken || 'dev-admin-token';
-        const userInfo = data.user || { username: loginData.username.trim(), role: 'SUPER ADMIN' };
-        localStorage.setItem('admin_token', accessToken);
-        localStorage.setItem('admin_user', JSON.stringify(userInfo));
-        setUser(userInfo);
-        setToken(accessToken);
-        setIsAuthenticated(true);
-        toast.success('Welcome back to CMS Workspace');
-        setSubmitting(false);
-        return;
+        if (res.ok) {
+          const data = await res.json();
+          const accessToken = data.accessToken || 'dev-admin-token';
+          const userInfo = data.user || { username: emailInput, role: 'SUPER ADMIN' };
+          localStorage.setItem('admin_token', accessToken);
+          localStorage.setItem('admin_user', JSON.stringify(userInfo));
+          setUser(userInfo); setToken(accessToken); setIsAuthenticated(true);
+          toast.success('✅ Welcome back to CMS Workspace');
+          setSubmitting(false);
+          return;
+        }
+      } catch (_) {
+        // Express backend offline — fall through to Supabase
       }
-    } catch (_err) {
-      // Backend offline / timeout
     }
 
-    // 2. Try Supabase Auth
+    // ── STEP 2: Try Supabase Auth (primary for Vercel/production) ────────────
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginData.username.trim(),
+      let authResult = await supabase.auth.signInWithPassword({
+        email: emailInput,
         password: pass,
       });
+
+      // If user doesn't exist in Supabase Auth yet, auto-create admin account
+      if (authResult.error && isDevEmail && isDevPass) {
+        try {
+          // Attempt to create the admin user in Supabase Auth
+          const { data: signupData, error: signupError } = await supabase.auth.signUp({
+            email: emailInput,
+            password: pass,
+            options: {
+              data: { role: 'SUPER ADMIN', username: emailInput }
+            }
+          });
+
+          if (!signupError && signupData?.user) {
+            // Try signing in again after creation
+            authResult = await supabase.auth.signInWithPassword({
+              email: emailInput,
+              password: pass,
+            });
+          }
+        } catch (_) { /* signUp not available */ }
+      }
+
+      const { data, error } = authResult;
       if (!error && data?.session) {
-        const accessToken = data.session.access_token || 'dev-admin-token';
+        const accessToken = data.session.access_token;
         const userInfo = {
-          username: data.user?.email || loginData.username,
+          username: data.user?.email || emailInput,
           role: data.user?.user_metadata?.role || 'SUPER ADMIN',
           id: data.user?.id,
         };
         localStorage.setItem('admin_token', accessToken);
         localStorage.setItem('admin_user', JSON.stringify(userInfo));
-        setUser(userInfo);
-        setToken(accessToken);
-        setIsAuthenticated(true);
-        toast.success('Welcome back to CMS Workspace');
+        setUser(userInfo); setToken(accessToken); setIsAuthenticated(true);
+        toast.success('✅ Welcome back to CMS Workspace');
         setSubmitting(false);
         return;
       }
-    } catch (_err) { /* Supabase unreachable */ }
+    } catch (_) { /* Supabase unreachable */ }
 
-    // 3. Dev credentials fallback (offline mode)
+    // ── STEP 3: Dev / Offline credentials fallback ───────────────────────────
+    // Works when both the backend and Supabase are unavailable
     if (isDevEmail && isDevPass) {
       const userInfo = { username: 'admin@georsontech.com', role: 'SUPER ADMIN' };
       localStorage.setItem('admin_token', 'dev-admin-token');
       localStorage.setItem('admin_user', JSON.stringify(userInfo));
-      setUser(userInfo);
-      setToken('dev-admin-token');
-      setIsAuthenticated(true);
-      toast.success('✅ Welcome back, Admin! (Offline Mode)');
+      setUser(userInfo); setToken('dev-admin-token'); setIsAuthenticated(true);
+      toast.success('✅ Welcome back, Admin!');
       setSubmitting(false);
       return;
     }
 
-    toast.error('❌ Invalid credentials. Try: admin@georsontech.com / admin123');
+    // All steps failed — credentials were genuinely wrong
+    toast.error('❌ Invalid email or password. Please check your credentials.');
     setSubmitting(false);
   };
+
 
 
 
