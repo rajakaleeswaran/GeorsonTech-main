@@ -6,6 +6,7 @@ import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import { supabase } from '../lib/supabase';
 import { getAssetUrl } from '../lib/dbHelper';
+import { API_BASE_URL } from '../lib/api';
 
 // Fallback challenges and capabilities depending on industry sector slug
 const SECTOR_METADATA = {
@@ -30,29 +31,32 @@ function IndustryDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let isMounted = true;
 
     const fetchIndustry = async () => {
       // 1. Try local backend
       try {
-        const res = await fetch(`http://localhost:5000/api/industries/${slug}`);
+        const res = await fetch(`${API_BASE_URL}/industries/${slug}`);
         if (res.ok) {
           const data = await res.json();
-          setIndustry(data);
+          if (isMounted) setIndustry(data);
           
           try {
-            const solRes = await fetch(`http://localhost:5000/api/solutions?industry=${data.id}`);
+            const solRes = await fetch(`${API_BASE_URL}/solutions?industry=${data.id}`);
             if (solRes.ok) {
               const solData = await solRes.json();
-              if (Array.isArray(solData)) setSolutions(solData);
+              if (Array.isArray(solData) && isMounted) setSolutions(solData);
             }
-          } catch (e) {}
-          setLoading(false);
+          } catch (_e) {
+            // Solutions fetch failure handled gracefully
+          }
+          if (isMounted) setLoading(false);
           return;
         }
-      } catch (err) {
+      } catch (_err) {
         console.warn("Local backend down. Querying Supabase for industry details.");
       }
+
 
       // 2. Supabase Fallback
       const { data: indData, error } = await supabase
@@ -83,11 +87,15 @@ function IndustryDetail() {
       } else {
         setIndustry(null);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     fetchIndustry();
+    return () => {
+      isMounted = false;
+    };
   }, [slug]);
+
 
   if (loading) {
     return (

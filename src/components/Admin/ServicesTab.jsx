@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -102,7 +103,7 @@ function ServicesTab({
               {services.map(svc => (
                 <tr key={svc.id}>
                   <td>
-                    <img src={svc.image_path ? `http://localhost:5000/${svc.image_path}` : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img src={svc.image_path ? getAssetUrl(svc.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                   </td>
                   <td>{svc.title}</td>
                   <td><span className={`badge ${svc.status === 'Publish' ? 'publish' : 'draft'}`}>{svc.status}</span></td>

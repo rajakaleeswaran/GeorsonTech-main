@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaFileAlt, FaTrash } from 'react-icons/fa';
 
@@ -21,7 +22,7 @@ function MediaTab({
           <div key={asset.id} style={{ border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
             <div style={{ height: '110px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               {asset.file_type.includes('image') ? (
-                <img src={`http://localhost:5000/${asset.file_path}`} alt={asset.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getAssetUrl(asset.file_path)} alt={asset.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <span style={{ fontSize: '24px', color: '#999' }}><FaFileAlt /></span>
               )}

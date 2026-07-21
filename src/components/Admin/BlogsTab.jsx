@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -12,6 +13,15 @@ function BlogsTab({
   saveBlog,
   deleteBlogItem
 }) {
+  const [customCat, setCustomCat] = React.useState(false);
+
+  const handleTitleChange = (val) => {
+    setBlogForm(prev => {
+      const newSlug = !prev.slug ? val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : prev.slug;
+      return { ...prev, title: val, slug: newSlug };
+    });
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -19,7 +29,7 @@ function BlogsTab({
         {!editingBlog && (
           <button className="btn-primary" onClick={() => {
             setEditingBlog('new');
-            setBlogForm({ category_id: '', title: '', slug: '', excerpt: '', content: '', status: 'Draft', seo_title: '', meta_description: '', seo_keywords: '' });
+            setBlogForm({ category_id: blogCategories[0]?.id || 1, category_name: blogCategories[0]?.name || 'Automation', title: '', slug: '', excerpt: '', content: '', status: 'Publish', seo_title: '', meta_description: '', seo_keywords: '' });
           }}>
             <FaPlus /> Create Blog Article
           </button>
@@ -31,19 +41,55 @@ function BlogsTab({
           <h3>{editingBlog === 'new' ? 'New Article' : 'Edit Article'}</h3>
           
           <div className="form-group">
-            <label>Category</label>
-            <select className="form-select" required value={blogForm.category_id} onChange={e => setBlogForm(prev => ({ ...prev, category_id: e.target.value }))}>
-              <option value="">-- Choose Category --</option>
-              {blogCategories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <label>Article Category</label>
+            {!customCat ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <select 
+                  className="form-select" 
+                  required 
+                  value={blogForm.category_id || blogForm.category_name} 
+                  onChange={e => {
+                    const selectedVal = e.target.value;
+                    if (selectedVal === 'ADD_NEW') {
+                      setCustomCat(true);
+                      setBlogForm(prev => ({ ...prev, category_id: '', category_name: '' }));
+                    } else {
+                      const matched = blogCategories.find(c => String(c.id) === String(selectedVal) || c.name === selectedVal);
+                      setBlogForm(prev => ({ 
+                        ...prev, 
+                        category_id: matched ? matched.id : selectedVal,
+                        category_name: matched ? matched.name : selectedVal 
+                      }));
+                    }
+                  }}
+                >
+                  <option value="">-- Choose Category --</option>
+                  {blogCategories.map(cat => (
+                    <option key={cat.id || cat.name} value={cat.id || cat.name}>{cat.name}</option>
+                  ))}
+                  <option value="ADD_NEW">+ Add Custom Category...</option>
+                </select>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Enter new category name..." 
+                  required 
+                  value={blogForm.category_name || ''} 
+                  onChange={e => setBlogForm(prev => ({ ...prev, category_name: e.target.value, category_id: e.target.value }))} 
+                />
+                <button type="button" className="btn-outline" onClick={() => setCustomCat(false)}>Select Existing</button>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
             <label>Article Title</label>
-            <input type="text" className="form-input" required value={blogForm.title} onChange={e => setBlogForm(prev => ({ ...prev, title: e.target.value }))} />
+            <input type="text" className="form-input" required value={blogForm.title} onChange={e => handleTitleChange(e.target.value)} />
           </div>
+
 
           <div className="form-group">
             <label>Slug (Unique URL)</label>
@@ -109,7 +155,7 @@ function BlogsTab({
               {blogs.map(blog => (
                 <tr key={blog.id}>
                   <td>
-                    <img src={blog.featured_image ? `http://localhost:5000/${blog.featured_image}` : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img src={blog.featured_image ? getAssetUrl(blog.featured_image) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                   </td>
                   <td>{blog.title}</td>
                   <td>{blog.category_name}</td>

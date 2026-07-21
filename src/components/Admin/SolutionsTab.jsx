@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -165,7 +166,7 @@ function SolutionsTab({
                 {solutions.map(sol => (
                   <tr key={sol.id}>
                     <td>
-                      <img src={sol.image_path ? `http://localhost:5000/${sol.image_path}` : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <img src={sol.image_path ? getAssetUrl(sol.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                     </td>
                     <td>{sol.name}</td>
                     <td>{sol.category_name}</td>

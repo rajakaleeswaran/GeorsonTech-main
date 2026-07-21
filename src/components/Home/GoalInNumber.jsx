@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import CountUp from 'react-countup';
 import { useInView } from 'react-intersection-observer';
 import {
-  FaProjectDiagram, FaUsers, FaBuilding, FaIndustry, FaTools
+  FaProjectDiagram, FaUsers, FaBuilding, FaIndustry
 } from 'react-icons/fa';
 import '../../styles/Home.css';
+
 
 // Use a fallback background if no dedicated image
 import GoalBg from '../../assets/Home/Hero/hero2.png';

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import '../styles/Components.css';
 import {
   FaPhone, FaEnvelope, FaMapMarkerAlt,
-  FaLinkedinIn, FaInstagram, FaFacebookF, FaWhatsapp
+  FaLinkedinIn, FaInstagram, FaFacebookF, FaWhatsapp, FaPinterestP, FaTwitter
 } from 'react-icons/fa';
+
 
 function TopBar() {
   const [scrolled, setScrolled] = useState(false);
@@ -46,16 +47,24 @@ function TopBar() {
             <a href="https://www.linkedin.com/company/georsontech" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
               <FaLinkedinIn size={12} />
             </a>
-            <a href="https://www.instagram.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <a href="https://www.instagram.com/georsontech_india?igsh=b3ZzaDk2c2Z2NXR6&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <FaInstagram size={12} />
             </a>
             <a href="https://www.facebook.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
               <FaFacebookF size={12} />
             </a>
+            <a href="https://x.com/Georson_Tech" target="_blank" rel="noopener noreferrer" aria-label="Twitter X">
+              <FaTwitter size={12} />
+            </a>
+            <a href="https://pin.it/1HN8gSx89" target="_blank" rel="noopener noreferrer" aria-label="Pinterest">
+              <FaPinterestP size={12} />
+            </a>
+
             <a href="https://wa.me/919840780897" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
               <FaWhatsapp size={12} />
             </a>
           </div>
+
         </div>
 
       </div>

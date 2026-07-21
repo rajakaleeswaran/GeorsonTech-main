@@ -1,3 +1,4 @@
+import { getAssetUrl } from '../../lib/api';
 import React from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -82,7 +83,7 @@ function IndustriesTab({
               {industries.map(ind => (
                 <tr key={ind.id}>
                   <td>
-                    <img src={ind.image_path ? `http://localhost:5000/${ind.image_path}` : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img src={ind.image_path ? getAssetUrl(ind.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                   </td>
                   <td>{ind.name}</td>
                   <td><span className={`badge ${ind.status === 'Publish' ? 'publish' : 'draft'}`}>{ind.status}</span></td>

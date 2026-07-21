@@ -5,6 +5,7 @@ import { FaCalendarAlt, FaClock, FaUser, FaArrowLeft, FaLinkedinIn, FaFacebookF,
 import '../styles/Blog.css';
 import { supabase } from '../lib/supabase';
 import { getAssetUrl } from '../lib/dbHelper';
+import { API_BASE_URL } from '../lib/api';
 
 function BlogPost() {
   const { slug } = useParams();
@@ -13,32 +14,35 @@ function BlogPost() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPostDetails = async () => {
-      setLoading(true);
+    let isMounted = true;
 
+    const fetchPostDetails = async () => {
       // 1. Attempt local backend fetch
       try {
-        const res = await fetch(`http://localhost:5000/api/blogs/${slug}`);
+        const res = await fetch(`${API_BASE_URL}/blogs/${slug}`);
         if (res.ok) {
           const data = await res.json();
-          setPost(data);
+          if (isMounted) setPost(data);
           
           try {
-            const allBlogsRes = await fetch('http://localhost:5000/api/blogs');
+            const allBlogsRes = await fetch(`${API_BASE_URL}/blogs`);
             if (allBlogsRes.ok) {
               const allBlogs = await allBlogsRes.json();
-              if (Array.isArray(allBlogs)) {
+              if (Array.isArray(allBlogs) && isMounted) {
                 const matches = allBlogs.filter(b => b.slug !== slug && b.category_name === data.category_name);
                 setRelated(matches.slice(0, 2));
               }
             }
-          } catch (e) {}
-          setLoading(false);
+          } catch (_e) {
+            // Ignored related fetch error
+          }
+          if (isMounted) setLoading(false);
           return;
         }
-      } catch (err) {
+      } catch (_err) {
         console.warn("Local backend down. Querying Supabase for blog details.");
       }
+
 
       // 2. Supabase Fallback
       const { data: postData, error } = await supabase
@@ -62,11 +66,15 @@ function BlogPost() {
       } else {
         setPost(null);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     fetchPostDetails();
+    return () => {
+      isMounted = false;
+    };
   }, [slug]);
+
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
@@ -174,7 +182,8 @@ function BlogPost() {
                   <div key={rel.id || i} className="sidebar-recent-post" style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>
                     <div className="sidebar-recent-img" style={{ width: '60px', height: '60px', borderRadius: '4px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
                       <img 
-                        src={rel.featured_image ? `http://localhost:5000/${rel.featured_image}` : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=100'} 
+                        src={rel.featured_image ? getAssetUrl(rel.featured_image) : 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&q=80&w=100'} 
+
                         alt={rel.title} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />

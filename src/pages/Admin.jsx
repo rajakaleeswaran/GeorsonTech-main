@@ -12,8 +12,9 @@ import {
 } from 'react-icons/fa';
 import '../styles/Admin.css';
 
-// State hook
 import useAdminState from '../hooks/useAdminState';
+import LogoImg from '../assets/Logo/Georson.png';
+
 
 // Tab Sub-Components
 import DashboardTab from '../components/Admin/DashboardTab';
@@ -42,8 +43,10 @@ function Admin() {
       <div className="admin-page">
         {!admin.isAuthenticated ? (
           <div className="admin-login-card">
+            <img src={LogoImg} alt="Georson Tech" className="admin-login-logo" />
             <h2 className="admin-login-title">Dynamic CMS Panel</h2>
-            <p className="admin-login-subtitle">Authenticate to adjust theme styling, slider layouts, offices, and dynamic analytics.</p>
+            <p className="admin-login-subtitle">Authenticate to adjust services, products, industries, media, and settings.</p>
+
             
             <form onSubmit={admin.handleLoginSubmit}>
               <div className="form-group">

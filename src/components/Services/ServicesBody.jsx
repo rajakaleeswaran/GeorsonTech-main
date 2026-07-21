@@ -20,11 +20,15 @@ function ServicesBody() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter based on search query
-  const filteredServices = services.filter((svc) =>
-    svc.title.toLowerCase().includes(search.toLowerCase()) ||
-    (svc.short_description && svc.short_description.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Filter based on search query safely handling title or name
+  const filteredServices = services.filter((svc) => {
+    if (!svc) return false;
+    const titleText = (svc.title || svc.name || "").toLowerCase();
+    const descText = (svc.short_description || svc.description || "").toLowerCase();
+    const query = search.toLowerCase();
+    return titleText.includes(query) || descText.includes(query);
+  });
+
 
   return (
     <div className="services-wrapper" style={{ padding: '60px 20px', background: '#FAFADA' }}>
@@ -107,8 +111,9 @@ function ServicesBody() {
                     {/* Card Content */}
                     <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <h3 style={{ fontSize: '19px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
-                        {svc.title}
+                        {svc.title || svc.name}
                       </h3>
+
                       <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, marginBottom: '20px' }}>
                         {svc.short_description || svc.description}
                       </p>

@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import LogoImg from '../assets/Logo/Georson-nobg.png';
 import '../styles/Components.css';
 import {
-  FaLinkedinIn, FaInstagram, FaFacebookF, FaWhatsapp, FaYoutube,
+  FaLinkedinIn, FaInstagram, FaFacebookF, FaWhatsapp, FaYoutube, FaPinterestP, FaTwitter,
   FaPhone, FaEnvelope, FaMapMarkerAlt,
   FaBuilding, FaCogs, FaIndustry, FaAngleRight
 } from 'react-icons/fa';
+
 import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
+
 
 const FALLBACK_OFFICES = [
   {
@@ -112,10 +114,14 @@ function Footer() {
           </p>
           <div className="footer-social" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
             <a href="https://www.linkedin.com/company/georsontech" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><FaLinkedinIn /></a>
-            <a href="https://www.instagram.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
+            <a href="https://www.instagram.com/georsontech_india?igsh=b3ZzaDk2c2Z2NXR6&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
             <a href="https://www.facebook.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebookF /></a>
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
+            <a href="https://x.com/Georson_Tech" target="_blank" rel="noopener noreferrer" aria-label="Twitter X"><FaTwitter /></a>
+            <a href="https://pin.it/1HN8gSx89" target="_blank" rel="noopener noreferrer" aria-label="Pinterest"><FaPinterestP /></a>
+            <a href="https://youtube.com/@georsontech_india?si=nDzNJQRTZdgTEo0V" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
           </div>
+
+
         </div>
 
         {/* Column 2: Quick Links */}

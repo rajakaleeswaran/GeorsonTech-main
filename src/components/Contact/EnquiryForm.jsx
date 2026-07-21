@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../../lib/api';
 
 function EnquiryForm() {
   const [form, setForm] = useState({
@@ -51,7 +52,8 @@ function EnquiryForm() {
 
     setSubmitting(true);
     try {
-      const response = await fetch("http://localhost:5000/api/enquiry", {
+      const response = await fetch(`${API_BASE_URL}/enquiry`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

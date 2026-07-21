@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../lib/api';
 
 function getBrowserName() {
   const ua = navigator.userAgent;
@@ -36,7 +37,7 @@ export function useVisitorTracker() {
       country: 'India' // Default local placeholder, can be geolocated in production via cloud flare header
     };
 
-    fetch('http://localhost:5000/api/visitor/track', {
+    fetch(`${API_BASE_URL}/visitor/track`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(trackingData)
@@ -44,3 +45,4 @@ export function useVisitorTracker() {
       .catch(() => console.log('Local visitor tracking skipped (Offline mode)'));
   }, [location.pathname]);
 }
+
