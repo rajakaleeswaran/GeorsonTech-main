@@ -213,14 +213,57 @@ export async function submitEnquiry(enquiryForm) {
   return { success: true };
 }
 
+// Helper to convert file to Base64 Data URL for universal cross-system storage
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
 /**
  * Handle career application submission
  */
 export async function submitCareerApplication(careerForm, resumeFile) {
   let resumePath = '';
 
-  // 1. Send to Express backend API first if online (saves resume file to disk via multer)
   if (resumeFile) {
+    // 1. Generate Base64 Data URL as guaranteed cross-system fallback
+    let base64Url = '';
+    try {
+      base64Url = await fileToBase64(resumeFile);
+    } catch (_) {}
+
+    // 2. Try uploading to Supabase Storage bucket
+    try {
+      const fileExt = (resumeFile.name.split('.').pop() || 'pdf').toLowerCase();
+      const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(fileName, resumeFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (!uploadError && uploadData) {
+        const { data } = supabase.storage.from('resumes').getPublicUrl(fileName);
+        if (data && data.publicUrl) {
+          resumePath = data.publicUrl;
+        }
+      }
+    } catch (e) {
+      console.log('Supabase storage bucket upload info:', e);
+    }
+
+    // 3. If Supabase storage is not configured / fails, use Base64 Data URL (100% accessible on any machine)
+    if (!resumePath) {
+      resumePath = base64Url;
+    }
+
+    // 4. Also notify local backend if online
     try {
       const formData = new FormData();
       formData.append('name', careerForm.name);
@@ -231,46 +274,14 @@ export async function submitCareerApplication(careerForm, resumeFile) {
       formData.append('coverLetter', careerForm.coverLetter);
       formData.append('resume', resumeFile);
 
-      const res = await fetch(`${API_BASE}/career`, {
+      await fetch(`${API_BASE}/career`, {
         method: 'POST',
         body: formData
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.resumePath) {
-          resumePath = data.resumePath;
-        }
-      }
-    } catch (err) {
-      console.log('Local backend offline during career resume upload.');
-    }
+    } catch (_) {}
   }
 
-  // 2. If local backend offline, try uploading resume file to Supabase Storage
-  if (!resumePath && resumeFile) {
-    try {
-      const fileExt = resumeFile.name.split('.').pop();
-      const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, resumeFile);
-
-      if (!uploadError && uploadData) {
-        const { data: { publicUrl } } = supabase.storage.from('resumes').getPublicUrl(fileName);
-        resumePath = publicUrl;
-      }
-    } catch (e) {
-      console.log('Supabase storage upload failed:', e);
-    }
-  }
-
-  // 3. Last fallback if no server storage available
-  if (!resumePath && resumeFile) {
-    resumePath = `uploads/resumes/${resumeFile.name}`;
-  }
-
-  // 4. Insert career application into Supabase DB with valid resumePath
+  // 5. Save record in Supabase career_applications table with universal resumePath
   const { error } = await supabase
     .from('career_applications')
     .insert([{
@@ -288,4 +299,5 @@ export async function submitCareerApplication(careerForm, resumeFile) {
 
   return { success: true };
 }
+
 
