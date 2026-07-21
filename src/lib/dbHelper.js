@@ -183,7 +183,44 @@ export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*'
  * Handle enquiry submission
  */
 export async function submitEnquiry(enquiryForm) {
-  // 1. Submit to Supabase directly (guarantees saving to Cloud DB)
+  let backendSuccess = false;
+
+  // 1. Try local Express backend first
+  try {
+    const res = await fetch(`${API_BASE}/enquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enquiryForm)
+    });
+    if (res.ok) {
+      backendSuccess = true;
+    }
+  } catch (err) {
+    console.log('Local backend is offline or failed during enquiry submission.');
+  }
+
+  if (backendSuccess) {
+    // Optionally log to Supabase in the background, but don't block success if it fails
+    try {
+      await supabase
+        .from('enquiries')
+        .insert([{
+          name: enquiryForm.name,
+          company: enquiryForm.company,
+          email: enquiryForm.email,
+          phone: enquiryForm.phone,
+          subject: enquiryForm.subject,
+          service_interested: enquiryForm.serviceInterested,
+          message: enquiryForm.message,
+          status: 'Pending'
+        }]);
+    } catch (e) {
+      console.log('Background Supabase sync failed:', e);
+    }
+    return { success: true };
+  }
+
+  // 2. If backend is offline/failed, fallback to Supabase as primary
   const { error } = await supabase
     .from('enquiries')
     .insert([{
@@ -199,17 +236,6 @@ export async function submitEnquiry(enquiryForm) {
 
   if (error) throw error;
 
-  // 2. Submit to local backend if online (to trigger local Node SMTP emails)
-  try {
-    await fetch(`${API_BASE}/enquiry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(enquiryForm)
-    });
-  } catch (err) {
-    console.log('Local backend is offline; SMTP email not sent, but successfully stored in Supabase.');
-  }
-
   return { success: true };
 }
 
@@ -218,6 +244,7 @@ export async function submitEnquiry(enquiryForm) {
  */
 export async function submitCareerApplication(careerForm, resumeFile) {
   let resumePath = '';
+  let backendSuccess = false;
 
   // 1. Send to Express backend API first if online (saves resume file to disk via multer)
   if (resumeFile) {
@@ -241,14 +268,37 @@ export async function submitCareerApplication(careerForm, resumeFile) {
         if (data.resumePath) {
           resumePath = data.resumePath;
         }
+        backendSuccess = true;
       }
     } catch (err) {
-      console.log('Local backend offline during career resume upload.');
+      console.log('Local backend offline or failed during career resume upload.');
     }
   }
 
-  // 2. If local backend offline, try uploading resume file to Supabase Storage
-  if (!resumePath && resumeFile) {
+  if (backendSuccess) {
+    // Try to sync to Supabase in the background, but don't block success if it fails
+    try {
+      const dbResumePath = resumePath || `uploads/resumes/${resumeFile?.name}`;
+      await supabase
+        .from('career_applications')
+        .insert([{
+          name: careerForm.name,
+          email: careerForm.email,
+          phone: careerForm.phone,
+          qualification: careerForm.qualification,
+          experience: careerForm.experience,
+          resume_path: dbResumePath,
+          cover_letter: careerForm.coverLetter,
+          status: 'Pending'
+        }]);
+    } catch (e) {
+      console.log('Background Supabase sync failed:', e);
+    }
+    return { success: true };
+  }
+
+  // 2. If local backend offline/failed, try uploading resume file to Supabase Storage
+  if (resumeFile) {
     try {
       const fileExt = resumeFile.name.split('.').pop();
       const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
