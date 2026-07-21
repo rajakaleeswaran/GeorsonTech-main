@@ -14,7 +14,7 @@ export const UPLOADS_BASE_URL = import.meta.env.VITE_UPLOADS_BASE_URL || 'http:/
  */
 export function getAssetUrl(path, type = 'general') {
   if (!path) return '';
-  if (path.startsWith('http://') || path.startsWith('https://')) {
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
     return path;
   }
   let cleanPath = path.replace(/\\/g, '/');

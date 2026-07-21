@@ -98,8 +98,13 @@ function Footer() {
   }, []);
 
   const getLogoSrc = () => {
-    if (!settings.logo_url) return LogoImg;
-    return getAssetUrl(settings.logo_url);
+    if (!settings || !settings.logo_url) return LogoImg;
+    const url = getAssetUrl(settings.logo_url);
+    // If running on non-localhost environment (like Vercel) and URL points to localhost, use bundled LogoImg
+    if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && url.includes('localhost')) {
+      return LogoImg;
+    }
+    return url;
   };
 
   return (
@@ -108,7 +113,15 @@ function Footer() {
         
         {/* Column 1: Brand & Logo */}
         <div className="footer-brand">
-          <img src={getLogoSrc()} alt="Georson Tech Pvt. Ltd" className="footer-logo" />
+          <img 
+            src={getLogoSrc()} 
+            alt="Georson Tech Pvt. Ltd" 
+            className="footer-logo" 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = LogoImg;
+            }}
+          />
           <p className="footer-motto">
             {settings.motto || "Gateway of Engineering & Technology. Delivering world-class Industrial Engineering, Automation, IoT, and Manufacturing solutions across India."}
           </p>

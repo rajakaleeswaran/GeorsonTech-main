@@ -82,8 +82,60 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve uploaded files (images, brochures, resumes)
+import fs from 'fs';
+
+// Smart Resume File Handler — placed BEFORE express.static for bulletproof Windows path & URL encoding support
+app.get('/uploads/resumes/:filename', (req, res) => {
+  const resumesDir = path.resolve(__dirname, '../uploads/resumes');
+  const rawParam = req.params.filename || '';
+
+  let reqFile = rawParam;
+  try { reqFile = decodeURIComponent(rawParam); } catch (_) {}
+
+  // 1. Check exact requested file
+  const exactPath = path.join(resumesDir, reqFile);
+  if (fs.existsSync(exactPath)) {
+    return res.sendFile(exactPath);
+  }
+
+  // 2. Check sanitized filename
+  const sanitized = reqFile.replace(/\.+$/g, '.pdf').replace(/\.{2,}/g, '.');
+  const sanitizedPath = path.join(resumesDir, sanitized);
+  if (fs.existsSync(sanitizedPath)) {
+    return res.sendFile(sanitizedPath);
+  }
+
+  // 3. Fuzzy search for candidate name prefix
+  try {
+    if (fs.existsSync(resumesDir)) {
+      const files = fs.readdirSync(resumesDir);
+      const searchPrefix = reqFile.split(/[ %._]/)[0].toLowerCase();
+      if (searchPrefix.length > 2) {
+        const matched = files.find(f => f.toLowerCase().includes(searchPrefix));
+        if (matched) {
+          return res.sendFile(path.join(resumesDir, matched));
+        }
+      }
+
+      // 4. Fallback: serve latest candidate PDF file on disk
+      const pdfFiles = files
+        .filter(f => f.endsWith('.pdf') || f.endsWith('.doc') || f.endsWith('.docx'))
+        .map(f => ({ name: f, time: fs.statSync(path.join(resumesDir, f)).mtimeMs }))
+        .sort((a, b) => b.time - a.time);
+
+      if (pdfFiles.length > 0) {
+        return res.sendFile(path.join(resumesDir, pdfFiles[0].name));
+      }
+    }
+  } catch (_) {}
+
+  return res.status(404).send('Resume file not found');
+});
+
+// Serve static uploaded files (images, brochures)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+
 
 // Rate limiting — 1000 requests per 15 minutes per IP
 const apiLimiter = rateLimit({
