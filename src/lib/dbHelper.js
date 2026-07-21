@@ -241,12 +241,39 @@ export async function submitEnquiry(enquiryForm) {
 
 /**
  * Handle career application submission
+ * Strategy:
+ *  1. Upload resume to Supabase Storage → get a public URL (works on any environment)
+ *  2. Notify local Express backend (for email notification and local disk copy)
+ *  3. Save the record with the Supabase public URL to the Supabase DB
  */
 export async function submitCareerApplication(careerForm, resumeFile) {
-  let resumePath = '';
-  let backendSuccess = false;
+  let resumePublicUrl = '';
 
-  // 1. Send to Express backend API first if online (saves resume file to disk via multer)
+  // ── STEP 1: Upload resume to Supabase Storage (primary — gives public URL) ──
+  if (resumeFile) {
+    try {
+      const fileExt = (resumeFile.name.split('.').pop() || 'pdf').toLowerCase();
+      const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `resume_${Date.now()}_${safeName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(fileName, resumeFile, { cacheControl: '3600', upsert: false });
+
+      if (!uploadError && uploadData) {
+        const { data } = supabase.storage.from('resumes').getPublicUrl(fileName);
+        if (data?.publicUrl) {
+          resumePublicUrl = data.publicUrl;
+        }
+      } else if (uploadError) {
+        console.warn('Supabase Storage upload error:', uploadError.message);
+      }
+    } catch (e) {
+      console.warn('Supabase Storage upload exception:', e.message);
+    }
+  }
+
+  // ── STEP 2: Notify local backend for email + local disk copy (non-blocking) ──
   if (resumeFile) {
     try {
       const formData = new FormData();
@@ -257,70 +284,22 @@ export async function submitCareerApplication(careerForm, resumeFile) {
       formData.append('experience', careerForm.experience);
       formData.append('coverLetter', careerForm.coverLetter);
       formData.append('resume', resumeFile);
-
-      const res = await fetch(`${API_BASE}/career`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.resumePath) {
-          resumePath = data.resumePath;
-        }
-        backendSuccess = true;
+      // Pass the Supabase public URL so the backend can store it instead of a local path
+      if (resumePublicUrl) {
+        formData.append('supabaseResumeUrl', resumePublicUrl);
       }
+
+      await fetch(`${API_BASE}/career`, { method: 'POST', body: formData });
     } catch (err) {
-      console.log('Local backend offline or failed during career resume upload.');
+      // Backend offline is acceptable — email won't send but data will still save
+      console.log('Local backend offline — email notification skipped.');
     }
   }
 
-  if (backendSuccess) {
-    // Try to sync to Supabase in the background, but don't block success if it fails
-    try {
-      const dbResumePath = resumePath || `uploads/resumes/${resumeFile?.name}`;
-      await supabase
-        .from('career_applications')
-        .insert([{
-          name: careerForm.name,
-          email: careerForm.email,
-          phone: careerForm.phone,
-          qualification: careerForm.qualification,
-          experience: careerForm.experience,
-          resume_path: dbResumePath,
-          cover_letter: careerForm.coverLetter,
-          status: 'Pending'
-        }]);
-    } catch (e) {
-      console.log('Background Supabase sync failed:', e);
-    }
-    return { success: true };
-  }
+  // ── STEP 3: Save application record to Supabase DB ──
+  // Use the Supabase public URL. If Storage upload failed, fallback gracefully.
+  const storedPath = resumePublicUrl || (resumeFile ? `uploads/resumes/${resumeFile.name}` : '');
 
-  // 2. If local backend offline/failed, try uploading resume file to Supabase Storage
-  if (resumeFile) {
-    try {
-      const fileExt = resumeFile.name.split('.').pop();
-      const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, resumeFile);
-
-      if (!uploadError && uploadData) {
-        const { data: { publicUrl } } = supabase.storage.from('resumes').getPublicUrl(fileName);
-        resumePath = publicUrl;
-      }
-    } catch (e) {
-      console.log('Supabase storage upload failed:', e);
-    }
-  }
-
-  // 3. Last fallback if no server storage available
-  if (!resumePath && resumeFile) {
-    resumePath = `uploads/resumes/${resumeFile.name}`;
-  }
-
-  // 4. Insert career application into Supabase DB with valid resumePath
   const { error } = await supabase
     .from('career_applications')
     .insert([{
@@ -329,7 +308,7 @@ export async function submitCareerApplication(careerForm, resumeFile) {
       phone: careerForm.phone,
       qualification: careerForm.qualification,
       experience: careerForm.experience,
-      resume_path: resumePath,
+      resume_path: storedPath,
       cover_letter: careerForm.coverLetter,
       status: 'Pending'
     }]);
@@ -338,5 +317,3 @@ export async function submitCareerApplication(careerForm, resumeFile) {
 
   return { success: true };
 }
-
-

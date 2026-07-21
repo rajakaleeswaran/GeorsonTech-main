@@ -51,6 +51,7 @@ import { getMedia, uploadMedia, deleteMedia } from './controllers/mediaControlle
 import { trackVisitor, getVisitorStats } from './controllers/visitorController.js';
 import { exportSql, restoreSql, exportCsv } from './controllers/backupController.js';
 import { globalSearch } from './controllers/searchController.js';
+import { upgradeDb } from '../database/upgrade_solutions_helper.js';
 
 // ─── MIDDLEWARE IMPORTS ───────────────────────────────────────────────────────
 import { authenticateToken, authorizeRoles } from './middleware/auth.js';
@@ -331,6 +332,15 @@ adminRouter.get('/analytics/visitors', authorizeRoles(R_SUPER, R_WEBSITE, R_MARK
 // Mount admin router
 app.use('/api/admin', adminRouter);
 
+app.get('/api/migrate-solutions', async (req, res) => {
+  try {
+    await upgradeDb();
+    res.json({ success: true, message: 'Database migrated successfully!' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'offline';
@@ -356,10 +366,22 @@ app.use((err, req, res, _next) => {
   });
 });
 
-// ─── START SERVER ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`✅ Georson Tech API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-  console.log(`   Frontend origin: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-});
+// ─── START SERVER (with auto-migration) ───────────────────────────────────────
+async function startServer() {
+  // Run DB migration to ensure all tables exist (safe — uses CREATE TABLE IF NOT EXISTS)
+  try {
+    await upgradeDb();
+    console.log('✅ Database tables verified/migrated.');
+  } catch (err) {
+    console.warn('⚠️  DB migration skipped (MySQL may be offline):', err.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Georson Tech API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+    console.log(`   Frontend origin: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  });
+}
+
+startServer();
 
 export default app;
