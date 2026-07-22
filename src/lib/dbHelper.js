@@ -241,6 +241,10 @@ export async function submitEnquiry(enquiryForm) {
 
 /**
  * Handle career application submission
+ * Strategy:
+ *  1. Upload resume to Supabase Storage → get a public URL (works on any environment)
+ *  2. Notify local Express backend (for email notification and local disk copy)
+ *  3. Save the record with the Supabase public URL to the Supabase DB
  */
 export async function submitCareerApplication(careerForm, resumeFile) {
   let resumePath = '';
@@ -281,19 +285,13 @@ export async function submitCareerApplication(careerForm, resumeFile) {
   // 2. Send to Express backend API backup if Supabase storage upload failed
   if (resumeFile && !resumePath) {
     try {
-      const formData = new FormData();
-      formData.append('name', careerForm.name);
-      formData.append('email', careerForm.email);
-      formData.append('phone', careerForm.phone);
-      formData.append('qualification', careerForm.qualification);
-      formData.append('experience', careerForm.experience);
-      formData.append('coverLetter', careerForm.coverLetter);
-      formData.append('resume', resumeFile);
+      const fileExt = (resumeFile.name.split('.').pop() || 'pdf').toLowerCase();
+      const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `resume_${Date.now()}_${safeName}`;
 
-      const res = await fetch(`${API_BASE}/career`, {
-        method: 'POST',
-        body: formData
-      });
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(fileName, resumeFile, { cacheControl: '3600', upsert: false });
 
       if (res.ok) {
         const data = await res.json();
@@ -323,7 +321,7 @@ export async function submitCareerApplication(careerForm, resumeFile) {
       phone: careerForm.phone,
       qualification: careerForm.qualification,
       experience: careerForm.experience,
-      resume_path: resumePath,
+      resume_path: storedPath,
       cover_letter: careerForm.coverLetter,
       status: 'Pending'
     }]);
