@@ -18,8 +18,8 @@ function CareersTab({
 
     const fileUrl = getAssetUrl(resumePath, 'resume');
 
-    // If it's a remote URL or data URL, open directly
-    if (resumePath.startsWith('http') || resumePath.startsWith('data:')) {
+    // If fileUrl resolves to a remote HTTP/HTTPS or data URL, open directly in a new tab
+    if (fileUrl && (fileUrl.startsWith('http') || fileUrl.startsWith('data:'))) {
       window.open(fileUrl, '_blank');
       return;
     }
@@ -31,7 +31,7 @@ function CareersTab({
         window.open(fileUrl, '_blank');
       } else {
         const fileName = resumePath.split('/').pop();
-        toast.error(`⚠️ Resume file "${fileName}" was submitted when server storage was offline.`);
+        toast.error(`⚠️ Resume file "${fileName}" is unavailable on server.`);
         if (candidateEmail && window.confirm(`File unavailable on server. Would you like to send an email request to ${candidateEmail}?`)) {
           window.location.href = `mailto:${candidateEmail}?subject=Resume%20Re-submission%20Request&body=Hi%20${encodeURIComponent(candidateName)},%0A%0AWe%20received%20your%20job%20application%20at%20Georson%20Tech.%20Please%20reply%20to%20this%20email%20with%20your%20resume/CV%20attached.%0A%0ABest%20regards,%0AGeorson%20Tech%20HR`;
         }

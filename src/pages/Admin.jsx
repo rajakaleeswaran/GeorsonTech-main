@@ -461,24 +461,24 @@ function Admin() {
                           className="btn-primary" 
                           style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#16a34a', borderColor: '#16a34a' }}
                           onClick={async (e) => {
-                            e.preventDefault();
-                            if (item.resume_path.startsWith('http') || item.resume_path.startsWith('data:')) {
-                              window.open(resumeUrl, '_blank');
-                              return;
-                            }
-                            try {
-                              const check = await fetch(resumeUrl, { method: 'HEAD' });
-                              if (check.ok) {
-                                window.open(resumeUrl, '_blank');
-                              } else {
-                                const fname = item.resume_path.split('/').pop();
-                                toast.error(`⚠️ File "${fname}" is unavailable on server.`);
-                                if (item.email && window.confirm(`File unavailable on server. Send email request to ${item.email}?`)) {
-                                  window.location.href = `mailto:${item.email}?subject=Resume%20Re-submission%20Request&body=Hi%20${encodeURIComponent(item.name)},%0A%0AWe%20received%20your%20job%20application.%20Please%20reply%20with%20your%20resume/CV%20attached.%0A%0ABest%20regards,%0AGeorson%20Tech%20HR`;
-                                }
-                              }
-                            } catch (_) { window.open(resumeUrl, '_blank'); }
-                          }}
+                             e.preventDefault();
+                             if (resumeUrl && (resumeUrl.startsWith('http') || resumeUrl.startsWith('data:'))) {
+                               window.open(resumeUrl, '_blank');
+                               return;
+                             }
+                             try {
+                               const check = await fetch(resumeUrl, { method: 'HEAD' });
+                               if (check.ok) {
+                                 window.open(resumeUrl, '_blank');
+                               } else {
+                                 const fname = item.resume_path.split('/').pop();
+                                 toast.error(`⚠️ File "${fname}" is unavailable on server.`);
+                                 if (item.email && window.confirm(`File unavailable on server. Send email request to ${item.email}?`)) {
+                                   window.location.href = `mailto:${item.email}?subject=Resume%20Re-submission%20Request&body=Hi%20${encodeURIComponent(item.name)},%0A%0AWe%20received%20your%20job%20application.%20Please%20reply%20with%20your%20resume/CV%20attached.%0A%0ABest%20regards,%0AGeorson%20Tech%20HR`;
+                                 }
+                               }
+                             } catch (_) { window.open(resumeUrl, '_blank'); }
+                           }}
                         >
                           <FaDownload /> Download
                         </a>
@@ -489,21 +489,21 @@ function Admin() {
                           className="btn-outline" 
                           style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#15803d', borderColor: '#86efac' }}
                           onClick={async (e) => {
-                            e.preventDefault();
-                            if (item.resume_path.startsWith('http') || item.resume_path.startsWith('data:')) {
-                              window.open(resumeUrl, '_blank');
-                              return;
-                            }
-                            try {
-                              const check = await fetch(resumeUrl, { method: 'HEAD' });
-                              if (check.ok) {
-                                window.open(resumeUrl, '_blank');
-                              } else {
-                                const fname = item.resume_path.split('/').pop();
-                                toast.error(`⚠️ File "${fname}" is unavailable on server.`);
-                              }
-                            } catch (_) { window.open(resumeUrl, '_blank'); }
-                          }}
+                             e.preventDefault();
+                             if (resumeUrl && (resumeUrl.startsWith('http') || resumeUrl.startsWith('data:'))) {
+                               window.open(resumeUrl, '_blank');
+                               return;
+                             }
+                             try {
+                               const check = await fetch(resumeUrl, { method: 'HEAD' });
+                               if (check.ok) {
+                                 window.open(resumeUrl, '_blank');
+                               } else {
+                                 const fname = item.resume_path.split('/').pop();
+                                 toast.error(`⚠️ File "${fname}" is unavailable on server.`);
+                               }
+                             } catch (_) { window.open(resumeUrl, '_blank'); }
+                           }}
                         >
                           <FaExternalLinkAlt /> Open
                         </a>

@@ -216,12 +216,13 @@ function Enquiry() {
       setResume(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to submit application. Please try again.');
+      console.error('[Career Submit Error]:', error);
+      toast.error(`Failed to submit: ${error?.message || 'Please try again.'}`);
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <>
