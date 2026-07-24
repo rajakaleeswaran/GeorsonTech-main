@@ -50,7 +50,7 @@ function TopBar() {
             <a href="https://www.instagram.com/georsontech_india?igsh=b3ZzaDk2c2Z2NXR6&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <FaInstagram size={12} />
             </a>
-            <a href="https://www.facebook.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <a href="https://www.facebook.com/profile.php?id=61592177770508" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
               <FaFacebookF size={12} />
             </a>
             <a href="https://x.com/Georson_Tech" target="_blank" rel="noopener noreferrer" aria-label="Twitter X">

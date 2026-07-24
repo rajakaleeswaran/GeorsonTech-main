@@ -128,7 +128,7 @@ function Footer() {
           <div className="footer-social" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
             <a href="https://www.linkedin.com/company/georsontech" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><FaLinkedinIn /></a>
             <a href="https://www.instagram.com/georsontech_india?igsh=b3ZzaDk2c2Z2NXR6&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
-            <a href="https://www.facebook.com/georsontech" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebookF /></a>
+            <a href="https://www.facebook.com/profile.php?id=61592177770508" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebookF /></a>
             <a href="https://x.com/Georson_Tech" target="_blank" rel="noopener noreferrer" aria-label="Twitter X"><FaTwitter /></a>
             <a href="https://pin.it/1HN8gSx89" target="_blank" rel="noopener noreferrer" aria-label="Pinterest"><FaPinterestP /></a>
             <a href="https://youtube.com/@georsontech_india?si=nDzNJQRTZdgTEo0V" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
@@ -205,7 +205,7 @@ function Footer() {
             {offices.map((office) => (
               <div key={office.id || office.office_name}>
                 <p style={{ fontWeight: '600', color: '#f8fafc', marginBottom: '2px' }}>
-                  {office.office_name} ({office.office_type})
+                  {office.office_name} 
                 </p>
                 <a href={`tel:${office.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaPhone /> {office.phone}</a>
                 <a href={`mailto:${office.email}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}><FaEnvelope /> {office.email}</a>

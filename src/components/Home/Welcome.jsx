@@ -10,41 +10,38 @@ function Welcome() {
           <img src={homeImg} alt="home" />
         </div>
 
-        <div className="home-content" data-aos="fade-left">
+ <div className="home-content" data-aos="fade-left">
+  <h2 className="home-title">ABOUT US</h2>
 
-            <div>
-              <h2 className="home-title">ABOUT US</h2>
+  <div className="home-text">
+    <p>
+      Formerly known as George Associates, established in 1984 by Mr. J.C.
+      George Chockiah, who is a pioneer in the field of industrial engineering,
+      providing business services focused mainly on electrical, mechanical, and
+      industrial automation installation and maintenance for over 30 years.
+    </p>
 
-              <p>
-                
-                Formerly knowns as George Associates established in 1984 by Mr.J.C George 
-                chockiah who is a pioneer in the field of industrial engineering and provided
-                business services focused mainly on electrical, mechanical, and industrial 
-                automation installation and maintenance for over 30 years.
-              </p>
+    <p>
+      After continuously partnering with various MNCs like SIEMENS, GE, ABB,
+      and SCHNEIDER and executing projects worth more than ₹20 crores over the
+      past 10 to 15 years, the company was restructured in 2017 into two
+      organizations: GEORGE MULTITECH SYSTEMS PVT. LTD. and GEORSONTECH PVT.
+      LTD.
+    </p>
 
-              <p>
-                After continuously partnering with various MNC Like SIEMENS, GE, ABB, and
-                SCHNIEDER and executing a worth of more than 20 crore value of projects in the
-                past 10 to 15 years, in the year 2017 it was offshoots into two organizations as
-                GEORGE MULTITECH SYSTEMS PVT LTD and GEORSONTECH PVT LTD
-              </p>
+    <p>
+      GEORGE MULTITECH SYSTEMS PVT. LTD. continues the industrial service
+      business involving electrical, mechanical, and instrumentation solutions,
+      whereas GEORSONTECH PVT. LTD. provides customized procurement, IoT, and
+      Industry 4.0 solutions by enhancing traditional automation systems.
+    </p>
+  </div>
 
-              <p>
-                GEORGE MULTITECH SYSTEMS PVT LTD to continue industrial service
-                business segment which involves electrical, mechanical, instrumentation
-                whereas the GEORSONTECH PVT LTD to provide complex or customized
-                procurement, IoT, Industry 4.0 solution service by enhancing traditional
-                automation systems.
-              </p>
-            </div>
-
-            <div>
-              <Link to="/about"  className="home-about-but" >Learn More</Link>
-
-            </div>
+  <Link to="/about" className="home-about-but">
+    Learn More
+  </Link>
+</div>
               
-        </div>
 
       </div>
     </section>
