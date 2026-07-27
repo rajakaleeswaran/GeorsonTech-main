@@ -143,17 +143,20 @@ const FALLBACK_DATA = {
 };
 
 /**
- * Perform a fetch to the backend or fallback to Supabase / local defaults
+ * Perform a fetch to the backend or fallback to Supabase / local CMS cache / defaults
  */
 export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*') {
+  // 1. Try local Express backend
   try {
     const res = await fetch(`${API_BASE}${endpoint}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
+        try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
         return data;
       }
       if (typeof data === 'object' && Object.keys(data).length > 0 && !Array.isArray(data)) {
+        try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
         return data;
       }
     }
@@ -161,20 +164,35 @@ export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*'
     console.warn(`Local backend down for ${endpoint}. Querying cloud DB.`);
   }
 
-  // Supabase fallback
+  // 2. Supabase fallback
   try {
     const { data, error } = await supabase
       .from(supabaseTable)
       .select(selectQuery);
     
     if (!error && Array.isArray(data) && data.length > 0) {
+      try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
       return data;
     }
   } catch (e) {
     console.warn(`Supabase fallback unavailable for ${supabaseTable}`);
   }
 
-  // Return static fallback collection if backend and cloud DB are unpopulated
+  // 3. Local persistent CMS cache fallback (ensures user updates stick after refresh)
+  try {
+    const cached = localStorage.getItem(`cms_cache_${supabaseTable}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
+  // 4. Return static fallback collection if backend and cloud DB are unpopulated
   return FALLBACK_DATA[supabaseTable] || [];
 }
 

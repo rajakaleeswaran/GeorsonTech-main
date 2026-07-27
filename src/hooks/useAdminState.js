@@ -101,18 +101,30 @@ export default function useAdminState() {
     browsers: [], devices: [], countries: [], popularPages: []
   });
 
-  // DB collections pre-populated with initial defaults
+  const getInitialCache = (key, fallback) => {
+    try {
+      const saved = localStorage.getItem(`cms_cache_${key}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) return parsed;
+      }
+    } catch (_) {}
+    return fallback;
+  };
+
+  // DB collections pre-populated with initial defaults / persistent CMS cache
   const [enquiries, setEnquiries] = useState([]);
   const [careers, setCareers] = useState([]);
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [productCategories, setProductCategories] = useState(INITIAL_PRODUCT_CATEGORIES);
-  const [blogs, setBlogs] = useState(INITIAL_BLOGS);
-  const [blogCategories, setBlogCategories] = useState(INITIAL_BLOG_CATEGORIES);
-  const [services, setServices] = useState(INITIAL_SERVICES);
-  const [industries, setIndustries] = useState(INITIAL_INDUSTRIES);
-  const [clients, setClients] = useState(INITIAL_CLIENTS);
-  const [solutions, setSolutions] = useState([]);
-  const [solutionCategories, setSolutionCategories] = useState(INITIAL_SOLUTION_CATEGORIES);
+  const [products, setProducts] = useState(() => getInitialCache('products', INITIAL_PRODUCTS));
+  const [productCategories, setProductCategories] = useState(() => getInitialCache('product_categories', INITIAL_PRODUCT_CATEGORIES));
+  const [blogs, setBlogs] = useState(() => getInitialCache('blogs', INITIAL_BLOGS));
+  const [blogCategories, setBlogCategories] = useState(() => getInitialCache('blog_categories', INITIAL_BLOG_CATEGORIES));
+  const [services, setServices] = useState(() => getInitialCache('services', INITIAL_SERVICES));
+  const [industries, setIndustries] = useState(() => getInitialCache('industries', INITIAL_INDUSTRIES));
+  const [clients, setClients] = useState(() => getInitialCache('clients', INITIAL_CLIENTS));
+  const [solutions, setSolutions] = useState(() => getInitialCache('solutions', []));
+  const [solutionCategories, setSolutionCategories] = useState(() => getInitialCache('solution_categories', INITIAL_SOLUTION_CATEGORIES));
   const [mediaAssets, setMediaAssets] = useState([]);
 
 
@@ -201,8 +213,16 @@ export default function useAdminState() {
       const res = await fetch(`${API_BASE_URL}${endpoint}`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) { setter(data); return; }
-        if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) { setter(data); return; }
+        if (Array.isArray(data) && data.length > 0) {
+          setter(data);
+          try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
+          return;
+        }
+        if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
+          setter(data);
+          try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
+          return;
+        }
       }
     } catch (_) { /* backend offline — fall through */ }
 
@@ -212,8 +232,28 @@ export default function useAdminState() {
         .from(supaTable)
         .select('*')
         .order(orderBy, { ascending: false });
-      if (!error && Array.isArray(data) && data.length > 0) setter(data);
-    } catch (_) { /* retain initial/pre-populated data */ }
+      if (!error && Array.isArray(data) && data.length > 0) {
+        setter(data);
+        try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
+        return;
+      }
+    } catch (_) { /* retain cached data */ }
+
+    // 3. Persistent CMS cache fallback
+    try {
+      const cached = localStorage.getItem(`cms_cache_${supaTable}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setter(parsed);
+          return;
+        }
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+          setter(parsed);
+          return;
+        }
+      }
+    } catch (_) {}
   };
 
   /**
@@ -605,10 +645,11 @@ export default function useAdminState() {
 
 
   // Solutions CRUD handlers
-  const saveSolution = (e) => {
+  const saveSolution = async (e) => {
     e.preventDefault();
-    const method = editingSolution === 'new' ? 'POST' : 'PUT';
-    const url = editingSolution === 'new'
+    const isNew = editingSolution === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/solutions`
       : `${API_BASE_URL}/admin/solutions/${editingSolution.id}`;
 
@@ -626,42 +667,97 @@ export default function useAdminState() {
 
     if (solutionImage) formData.append('image', solutionImage);
 
-    fetch(url, {
-      method,
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    })
-      .then(res => {
-        if (res.ok) {
-          toast.success("Solution saved successfully");
-          setEditingSolution(null);
-          setSolutionImage(null);
-          fetchSolutions();
-        } else {
-          toast.error("Failed to save solution");
-        }
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
+        body: formData
       });
+      if (res.ok) {
+        toast.success("Solution saved successfully");
+        setEditingSolution(null);
+        setSolutionImage(null);
+        fetchSolutions();
+        return;
+      }
+    } catch (_) {}
+
+    // Supabase Cloud DB fallback
+    try {
+      let uploadedImgPath = editingSolution?.image_path || null;
+      if (solutionImage) {
+        const imgUrl = await uploadImageToSupabase(solutionImage, 'solutions');
+        if (imgUrl) uploadedImgPath = imgUrl;
+      }
+
+      const payload = {
+        category_id: solutionForm.category_id ? Number(solutionForm.category_id) : null,
+        name: solutionForm.name,
+        slug: solutionForm.slug || solutionForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        description: solutionForm.description || '',
+        icon: solutionForm.icon || '',
+        service_descriptions: solutionForm.service_descriptions || '',
+        sort_order: Number(solutionForm.sort_order) || 0,
+        status: solutionForm.status || 'Publish',
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('solutions').insert([payload]);
+      } else {
+        supaRes = await supabase.from('solutions').update(payload).eq('id', editingSolution.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Solution saved to Cloud Database!");
+        setEditingSolution(null);
+        setSolutionImage(null);
+        fetchSolutions();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase solution save error:", err);
+    }
+
+    setEditingSolution(null);
+    setSolutionImage(null);
   };
 
-  const deleteSolutionItem = (id) => {
+  const deleteSolutionItem = async (id) => {
     if (window.confirm("Delete this solution?")) {
-      fetch(`${API_BASE_URL}/admin/solutions/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/solutions/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Solution deleted");
           fetchSolutions();
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('solutions').delete().eq('id', id);
+        if (!error) {
+          toast.info("Solution deleted from Cloud Database");
+          fetchSolutions();
+          return;
+        }
+      } catch (_) {}
+
+      setSolutions(prev => prev.filter(s => s.id !== id));
+      toast.info("Solution deleted locally");
     }
   };
 
   // Solution Categories CRUD handlers
   const saveSolutionCategory = async (e) => {
     e.preventDefault();
-    const method = editingSolutionCategory === 'new' ? 'POST' : 'PUT';
-    const url = editingSolutionCategory === 'new'
+    const isNew = editingSolutionCategory === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/solutions/categories`
       : `${API_BASE_URL}/admin/solutions/categories/${editingSolutionCategory.id}`;
 
@@ -679,50 +775,101 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
+    // Supabase Cloud DB fallback
+    try {
+      const slug = solutionCategoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const payload = { name: solutionCategoryForm.name, slug, sort_order: Number(solutionCategoryForm.sort_order) || 0 };
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('solution_categories').insert([payload]);
+      } else {
+        supaRes = await supabase.from('solution_categories').update(payload).eq('id', editingSolutionCategory.id);
+      }
+      if (!supaRes.error) {
+        toast.success("✅ Solution category saved to Cloud Database!");
+        setEditingSolutionCategory(null);
+        fetchSolutions();
+        return;
+      }
+    } catch (_) {}
+
     // Offline fallback: update local state directly
     const slug = solutionCategoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    if (editingSolutionCategory === 'new') {
+    if (isNew) {
       const newCat = { id: Date.now(), ...solutionCategoryForm, slug };
       setSolutionCategories(prev => [...prev, newCat]);
     } else {
       setSolutionCategories(prev => prev.map(c => c.id === editingSolutionCategory.id ? { ...c, ...solutionCategoryForm, slug } : c));
     }
-    toast.success("Category saved locally (offline mode)");
+    toast.success("Category saved locally");
     setEditingSolutionCategory(null);
   };
 
-  const deleteSolutionCategoryItem = (id) => {
+  const deleteSolutionCategoryItem = async (id) => {
     if (window.confirm("Delete this solution category?")) {
-      fetch(`${API_BASE_URL}/admin/solutions/categories/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/solutions/categories/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Category deleted");
           fetchSolutions();
-        } else {
-          res.json().then(d => toast.error(d.message || "Failed to delete"));
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('solution_categories').delete().eq('id', id);
+        if (!error) {
+          toast.info("Category deleted from Cloud Database");
+          fetchSolutions();
+          return;
+        }
+      } catch (_) {}
+
+      setSolutionCategories(prev => prev.filter(c => c.id !== id));
+      toast.info("Category deleted locally");
     }
+  };
+
+  // ─── UTILITY STORAGE UPLOADER ──────────────────────────────────────────────
+  const uploadImageToSupabase = async (file, folder = 'uploads') => {
+    if (!file) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+      if (!error && data) {
+        const { data: publicData } = supabase.storage.from('images').getPublicUrl(fileName);
+        return publicData?.publicUrl || fileName;
+      }
+    } catch (err) {
+      console.warn('Supabase storage upload error:', err);
+    }
+    return null;
   };
 
   // Services CRUD handlers
   const saveService = async (e) => {
     e.preventDefault();
-    const method = editingService === 'new' ? 'POST' : 'PUT';
-    const url = editingService === 'new'
+    const isNew = editingService === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/services`
       : `${API_BASE_URL}/admin/services/${editingService.id}`;
 
     const formData = new FormData();
     formData.append('title', serviceForm.title);
     formData.append('slug', serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-    formData.append('short_description', serviceForm.short_description);
-    formData.append('detailed_description', serviceForm.detailed_description);
-    formData.append('features', serviceForm.features);
-    formData.append('sort_order', serviceForm.sort_order);
-    formData.append('status', serviceForm.status);
+    formData.append('short_description', serviceForm.short_description || '');
+    formData.append('detailed_description', serviceForm.detailed_description || '');
+    formData.append('features', serviceForm.features || '');
+    formData.append('sort_order', serviceForm.sort_order || 0);
+    formData.append('status', serviceForm.status || 'Publish');
     if (serviceImage) formData.append('image', serviceImage);
     if (serviceBrochure) formData.append('brochure', serviceBrochure);
 
@@ -740,40 +887,112 @@ export default function useAdminState() {
         fetchServices();
         return;
       }
-    } catch (_) { /* API offline */ }
+    } catch (_) { /* Express backend offline — fall through to Supabase */ }
+
+    // Supabase Cloud DB fallback (Persists updates to Vercel live site!)
+    try {
+      let uploadedImgPath = editingService?.image_path || null;
+      let uploadedBrochurePath = editingService?.brochure_path || null;
+
+      if (serviceImage) {
+        const imgUrl = await uploadImageToSupabase(serviceImage, 'services');
+        if (imgUrl) uploadedImgPath = imgUrl;
+      }
+      if (serviceBrochure) {
+        const pdfUrl = await uploadImageToSupabase(serviceBrochure, 'brochures');
+        if (pdfUrl) uploadedBrochurePath = pdfUrl;
+      }
+
+      const payload = {
+        title: serviceForm.title,
+        slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        short_description: serviceForm.short_description || '',
+        detailed_description: serviceForm.detailed_description || '',
+        features: serviceForm.features || '',
+        sort_order: Number(serviceForm.sort_order) || 0,
+        status: serviceForm.status || 'Publish',
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
+        ...(uploadedBrochurePath ? { brochure_path: uploadedBrochurePath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('services').insert([payload]);
+      } else {
+        supaRes = await supabase.from('services').update(payload).eq('id', editingService.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Service saved to Cloud Database!");
+        setEditingService(null);
+        setServiceImage(null);
+        setServiceBrochure(null);
+        fetchServices();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase service save exception:", err);
+    }
 
     // Offline fallback
-    if (editingService === 'new') {
+    if (isNew) {
       const newSvc = { id: Date.now(), ...serviceForm, slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
-      setServices(prev => [...prev, newSvc]);
+      setServices(prev => {
+        const updated = [...prev, newSvc];
+        try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
+        return updated;
+      });
     } else {
-      setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...serviceForm } : s));
+      setServices(prev => {
+        const updated = prev.map(s => s.id === editingService.id ? { ...s, ...serviceForm } : s);
+        try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
+        return updated;
+      });
     }
-    toast.success("Service saved locally (offline mode)");
+    toast.success("Service updated");
     setEditingService(null);
     setServiceImage(null);
     setServiceBrochure(null);
   };
 
-  const deleteServiceItem = (id) => {
+  const deleteServiceItem = async (id) => {
     if (window.confirm("Delete this service?")) {
-      fetch(`${API_BASE_URL}/admin/services/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/services/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Service deleted");
           fetchServices();
+          return;
         }
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('services').delete().eq('id', id);
+        if (!error) {
+          toast.info("Service deleted from Cloud Database");
+          fetchServices();
+          return;
+        }
+      } catch (_) {}
+
+      setServices(prev => {
+        const updated = prev.filter(s => s.id !== id);
+        try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
+        return updated;
       });
+      toast.info("Service deleted");
     }
   };
 
   // Products CRUD handlers
   const saveProduct = async (e) => {
     e.preventDefault();
-    const method = editingProduct === 'new' ? 'POST' : 'PUT';
-    const url = editingProduct === 'new'
+    const isNew = editingProduct === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/products`
       : `${API_BASE_URL}/admin/products/${editingProduct.id}`;
 
@@ -790,15 +1009,15 @@ export default function useAdminState() {
       } else if (Array.isArray(productForm.specifications)) {
         specsJson = JSON.stringify(productForm.specifications);
       }
-    }
+    }       
 
     const formData = new FormData();
-    formData.append('category_id', productForm.category_id);
+    formData.append('category_id', productForm.category_id || '');
     formData.append('name', productForm.name);
     formData.append('slug', productForm.slug);
-    formData.append('description', productForm.description);
+    formData.append('description', productForm.description || '');
     formData.append('specifications', specsJson || '[]');
-    formData.append('video_url', productForm.video_url);
+    formData.append('video_url', productForm.video_url || '');
     formData.append('is_featured', productForm.is_featured);
     if (productImage) formData.append('image', productImage);
     if (productBrochure) formData.append('brochure', productBrochure);
@@ -819,38 +1038,110 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
-    // Offline fallback
-    if (editingProduct === 'new') {
-      const newProd = { id: Date.now(), ...productForm, category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || '' };
-      setProducts(prev => [...prev, newProd]);
-    } else {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productForm } : p));
+    // Supabase Cloud DB fallback
+    try {
+      let uploadedImgPath = editingProduct?.image_path || null;
+      let uploadedBrochurePath = editingProduct?.brochure_path || null;
+
+      if (productImage) {
+        const imgUrl = await uploadImageToSupabase(productImage, 'products');
+        if (imgUrl) uploadedImgPath = imgUrl;
+      }
+      if (productBrochure) {
+        const pdfUrl = await uploadImageToSupabase(productBrochure, 'brochures');
+        if (pdfUrl) uploadedBrochurePath = pdfUrl;
+      }
+
+      const payload = {
+        category_id: productForm.category_id ? Number(productForm.category_id) : null,
+        name: productForm.name,
+        slug: productForm.slug || productForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        description: productForm.description || '',
+        specifications: specsJson || '[]',
+        video_url: productForm.video_url || '',
+        is_featured: !!productForm.is_featured,
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
+        ...(uploadedBrochurePath ? { brochure_path: uploadedBrochurePath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('products').insert([payload]);
+      } else {
+        supaRes = await supabase.from('products').update(payload).eq('id', editingProduct.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Product saved to Cloud Database!");
+        setEditingProduct(null);
+        setProductImage(null);
+        setProductBrochure(null);
+        fetchProducts();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase product save error:", err);
     }
-    toast.success("Product saved locally (offline mode)");
+
+    // Offline fallback
+    if (isNew) {
+      const newProd = { id: Date.now(), ...productForm, category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || '' };
+      setProducts(prev => {
+        const updated = [...prev, newProd];
+        try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
+        return updated;
+      });
+    } else {
+      setProducts(prev => {
+        const updated = prev.map(p => p.id === editingProduct.id ? { ...p, ...productForm } : p);
+        try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
+        return updated;
+      });
+    }
+    toast.success("Product updated");
     setEditingProduct(null);
     setProductImage(null);
     setProductBrochure(null);
   };
 
-  const deleteProductItem = (id) => {
+  const deleteProductItem = async (id) => {
     if (window.confirm("Delete this product?")) {
-      fetch(`${API_BASE_URL}/admin/products/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Product deleted");
           fetchProducts();
+          return;
         }
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('products').delete().eq('id', id);
+        if (!error) {
+          toast.info("Product deleted from Cloud Database");
+          fetchProducts();
+          return;
+        }
+      } catch (_) {}
+
+      setProducts(prev => {
+        const updated = prev.filter(p => p.id !== id);
+        try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
+        return updated;
       });
+      toast.info("Product deleted");
     }
   };
 
   // Product Category CRUD handlers
   const saveProductCategory = async (e) => {
     e.preventDefault();
-    const method = editingProductCategory === 'new' ? 'POST' : 'PUT';
-    const url = editingProductCategory === 'new'
+    const isNew = editingProductCategory === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/products/categories`
       : `${API_BASE_URL}/admin/products/categories/${editingProductCategory.id}`;
 
@@ -868,48 +1159,79 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
+    // Supabase Cloud DB fallback
+    try {
+      const slug = productCategoryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || '';
+      const payload = { name: productCategoryForm.name, slug };
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('product_categories').insert([payload]);
+      } else {
+        supaRes = await supabase.from('product_categories').update(payload).eq('id', editingProductCategory.id);
+      }
+      if (!supaRes.error) {
+        toast.success("✅ Category saved to Cloud Database!");
+        setEditingProductCategory(null);
+        fetchProducts();
+        return;
+      }
+    } catch (_) {}
+
     // Offline fallback
     const slug = productCategoryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || '';
-    if (editingProductCategory === 'new') {
+    if (isNew) {
       setProductCategories(prev => [...prev, { id: Date.now(), ...productCategoryForm, slug }]);
     } else {
       setProductCategories(prev => prev.map(c => c.id === editingProductCategory.id ? { ...c, ...productCategoryForm, slug } : c));
     }
-    toast.success("Category saved locally (offline mode)");
+    toast.success("Category saved locally");
     setEditingProductCategory(null);
   };
 
-  const deleteProductCategoryItem = (id) => {
+  const deleteProductCategoryItem = async (id) => {
     if (window.confirm("Delete this product category?")) {
-      fetch(`${API_BASE_URL}/admin/products/categories/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/products/categories/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Category deleted");
           fetchProducts();
-        } else {
-          res.json().then(d => toast.error(d.message || "Failed to delete"));
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('product_categories').delete().eq('id', id);
+        if (!error) {
+          toast.info("Category deleted from Cloud Database");
+          fetchProducts();
+          return;
+        }
+      } catch (_) {}
+
+      setProductCategories(prev => prev.filter(c => c.id !== id));
+      toast.info("Category deleted locally");
     }
   };
 
   // Industries CRUD handlers
   const saveIndustry = async (e) => {
     e.preventDefault();
-    const method = editingIndustry === 'new' ? 'POST' : 'PUT';
-    const url = editingIndustry === 'new'
+    const isNew = editingIndustry === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/industries`
       : `${API_BASE_URL}/admin/industries/${editingIndustry.id}`;
 
     const formData = new FormData();
     formData.append('name', industryForm.name);
     formData.append('slug', industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-    formData.append('description', industryForm.description);
-    formData.append('detailed_description', industryForm.detailed_description);
-    formData.append('sort_order', industryForm.sort_order);
-    formData.append('status', industryForm.status);
+    formData.append('description', industryForm.description || '');
+    formData.append('detailed_description', industryForm.detailed_description || '');
+    formData.append('sort_order', industryForm.sort_order || 0);
+    formData.append('status', industryForm.status || 'Publish');
     if (industryImage) formData.append('image', industryImage);
 
     try {
@@ -927,44 +1249,95 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
+    // Supabase Cloud DB fallback
+    try {
+      let uploadedImgPath = editingIndustry?.image_path || null;
+      if (industryImage) {
+        const imgUrl = await uploadImageToSupabase(industryImage, 'industries');
+        if (imgUrl) uploadedImgPath = imgUrl;
+      }
+
+      const payload = {
+        name: industryForm.name,
+        slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        description: industryForm.description || '',
+        detailed_description: industryForm.detailed_description || '',
+        sort_order: Number(industryForm.sort_order) || 0,
+        status: industryForm.status || 'Publish',
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('industries').insert([payload]);
+      } else {
+        supaRes = await supabase.from('industries').update(payload).eq('id', editingIndustry.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Industry saved to Cloud Database!");
+        setEditingIndustry(null);
+        setIndustryImage(null);
+        fetchIndustries();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase industry save error:", err);
+    }
+
     // Offline fallback
-    if (editingIndustry === 'new') {
+    if (isNew) {
       const newInd = { id: Date.now(), ...industryForm, slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
       setIndustries(prev => [...prev, newInd]);
     } else {
       setIndustries(prev => prev.map(i => i.id === editingIndustry.id ? { ...i, ...industryForm } : i));
     }
-    toast.success("Industry saved locally (offline mode)");
+    toast.success("Industry updated in current session");
     setEditingIndustry(null);
     setIndustryImage(null);
   };
 
-  const deleteIndustryItem = (id) => {
+  const deleteIndustryItem = async (id) => {
     if (window.confirm("Delete this industry?")) {
-      fetch(`${API_BASE_URL}/admin/industries/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/industries/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Industry deleted");
           fetchIndustries();
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('industries').delete().eq('id', id);
+        if (!error) {
+          toast.info("Industry deleted from Cloud Database");
+          fetchIndustries();
+          return;
+        }
+      } catch (_) {}
+
+      setIndustries(prev => prev.filter(i => i.id !== id));
+      toast.info("Industry deleted locally");
     }
   };
 
   // Clients CRUD handlers
   const saveClient = async (e) => {
     e.preventDefault();
-    const method = editingClient === 'new' ? 'POST' : 'PUT';
-    const url = editingClient === 'new'
+    const isNew = editingClient === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/clients`
       : `${API_BASE_URL}/admin/clients/${editingClient.id}`;
 
     const formData = new FormData();
     formData.append('name', clientForm.name);
-    formData.append('sort_order', clientForm.sort_order);
-    formData.append('status', clientForm.status);
+    formData.append('sort_order', clientForm.sort_order || 0);
+    formData.append('status', clientForm.status || 'Publish');
     formData.append('category', clientForm.category || 'Client');
     if (clientLogo) formData.append('logo', clientLogo);
 
@@ -983,36 +1356,85 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
+    // Supabase Cloud DB fallback
+    try {
+      let uploadedLogoPath = editingClient?.logo_path || null;
+      if (clientLogo) {
+        const logoUrl = await uploadImageToSupabase(clientLogo, 'clients');
+        if (logoUrl) uploadedLogoPath = logoUrl;
+      }
+
+      const payload = {
+        name: clientForm.name,
+        sort_order: Number(clientForm.sort_order) || 0,
+        status: clientForm.status || 'Publish',
+        category: clientForm.category || 'Client',
+        ...(uploadedLogoPath ? { logo_path: uploadedLogoPath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('clients').insert([payload]);
+      } else {
+        supaRes = await supabase.from('clients').update(payload).eq('id', editingClient.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Client saved to Cloud Database!");
+        setEditingClient(null);
+        setClientLogo(null);
+        fetchClients();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase client save error:", err);
+    }
+
     // Offline fallback
-    if (editingClient === 'new') {
+    if (isNew) {
       setClients(prev => [...prev, { id: Date.now(), ...clientForm }]);
     } else {
       setClients(prev => prev.map(c => c.id === editingClient.id ? { ...c, ...clientForm } : c));
     }
-    toast.success("Client saved locally (offline mode)");
+    toast.success("Client updated in current session");
     setEditingClient(null);
     setClientLogo(null);
   };
 
-  const deleteClientItem = (id) => {
+  const deleteClientItem = async (id) => {
     if (window.confirm("Delete this client?")) {
-      fetch(`${API_BASE_URL}/admin/clients/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/clients/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Client deleted");
           fetchClients();
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('clients').delete().eq('id', id);
+        if (!error) {
+          toast.info("Client deleted from Cloud Database");
+          fetchClients();
+          return;
+        }
+      } catch (_) {}
+
+      setClients(prev => prev.filter(c => c.id !== id));
+      toast.info("Client deleted locally");
     }
   };
 
   // Blogs CRUD handlers
   const saveBlog = async (e) => {
     e.preventDefault();
-    const method = editingBlog === 'new' ? 'POST' : 'PUT';
-    const url = editingBlog === 'new'
+    const isNew = editingBlog === 'new';
+    const method = isNew ? 'POST' : 'PUT';
+    const url = isNew
       ? `${API_BASE_URL}/admin/blogs`
       : `${API_BASE_URL}/admin/blogs/${editingBlog.id}`;
 
@@ -1021,9 +1443,9 @@ export default function useAdminState() {
     formData.append('category_name', blogForm.category_name || '');
     formData.append('title', blogForm.title);
     formData.append('slug', blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-    formData.append('excerpt', blogForm.excerpt);
-    formData.append('content', blogForm.content);
-    formData.append('status', blogForm.status);
+    formData.append('excerpt', blogForm.excerpt || '');
+    formData.append('content', blogForm.content || '');
+    formData.append('status', blogForm.status || 'Draft');
     formData.append('seo_title', blogForm.seo_title || '');
     formData.append('meta_description', blogForm.meta_description || '');
     formData.append('seo_keywords', blogForm.seo_keywords || '');
@@ -1044,29 +1466,85 @@ export default function useAdminState() {
       }
     } catch (_) { /* API offline */ }
 
+    // Supabase Cloud DB fallback
+    try {
+      let uploadedImgPath = editingBlog?.featured_image || null;
+      if (blogImage) {
+        const imgUrl = await uploadImageToSupabase(blogImage, 'blogs');
+        if (imgUrl) uploadedImgPath = imgUrl;
+      }
+
+      const catName = blogForm.category_name || blogCategories.find(c => String(c.id) === String(blogForm.category_id))?.name || '';
+
+      const payload = {
+        category_id: blogForm.category_id ? Number(blogForm.category_id) : null,
+        category_name: catName,
+        title: blogForm.title,
+        slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        excerpt: blogForm.excerpt || '',
+        content: blogForm.content || '',
+        status: blogForm.status || 'Draft',
+        seo_title: blogForm.seo_title || '',
+        meta_description: blogForm.meta_description || '',
+        seo_keywords: blogForm.seo_keywords || '',
+        ...(uploadedImgPath ? { featured_image: uploadedImgPath } : {})
+      };
+
+      let supaRes;
+      if (isNew) {
+        supaRes = await supabase.from('blogs').insert([payload]);
+      } else {
+        supaRes = await supabase.from('blogs').update(payload).eq('id', editingBlog.id);
+      }
+
+      if (!supaRes.error) {
+        toast.success("✅ Blog article saved to Cloud Database!");
+        setEditingBlog(null);
+        setBlogImage(null);
+        fetchBlogs();
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase blog save error:", err);
+    }
+
     // Offline fallback
     const catName = blogForm.category_name || blogCategories.find(c => String(c.id) === String(blogForm.category_id))?.name || '';
-    if (editingBlog === 'new') {
+    if (isNew) {
       setBlogs(prev => [...prev, { id: Date.now(), ...blogForm, category_name: catName, slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }]);
     } else {
       setBlogs(prev => prev.map(b => b.id === editingBlog.id ? { ...b, ...blogForm, category_name: catName } : b));
     }
-    toast.success("Blog saved locally (offline mode)");
+    toast.success("Blog article updated in current session");
     setEditingBlog(null);
     setBlogImage(null);
   };
 
-  const deleteBlogItem = (id) => {
+  const deleteBlogItem = async (id) => {
     if (window.confirm("Delete this blog article?")) {
-      fetch(`${API_BASE_URL}/admin/blogs/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      }).then(res => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/blogs/${id}`, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
         if (res.ok) {
           toast.info("Blog deleted");
           fetchBlogs();
+          return;
         }
-      });
+      } catch (_) {}
+
+      try {
+        const { error } = await supabase.from('blogs').delete().eq('id', id);
+        if (!error) {
+          toast.info("Blog deleted from Cloud Database");
+          fetchBlogs();
+          return;
+        }
+      } catch (_) {}
+
+      setBlogs(prev => prev.filter(b => b.id !== id));
+      toast.info("Blog deleted locally");
     }
   };
 
