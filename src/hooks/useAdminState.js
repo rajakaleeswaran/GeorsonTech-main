@@ -26,12 +26,12 @@ const INITIAL_CLIENTS = [
 ];
 
 const INITIAL_SERVICES = [
-  { id: 1, title: "Industrial Automation & PLC/SCADA Integration", slug: "industrial-automation", short_description: "End-to-end automation design, Siemens/Rockwell PLC programming, HMI screen mapping, and SCADA architecture.", status: "Publish" },
-  { id: 2, title: "PCC & MCC Electrical Panel Manufacturing", slug: "electrical-panels", short_description: "Custom power control centers (PCC) and motor control centers (MCC) built to CPRI and CEIG compliance.", status: "Publish" },
-  { id: 3, title: "IIoT & Industry 4.0 Smart Gateway Solutions", slug: "iiot-solutions", short_description: "Connect legacy factory equipment to cloud dashboards for real-time telemetry, energy tracking, and predictive maintenance.", status: "Publish" },
-  { id: 4, title: "Turnkey Mechanical & Electrical EPC Contracts", slug: "epc-contracts", short_description: "Concept to commissioning project execution: high-voltage cabling, structural trays, piping, and plant layout design.", status: "Publish" },
-  { id: 5, title: "Special Purpose Machines (SPM) & Retrofitting", slug: "special-purpose-machines", short_description: "Custom designed SPM machinery for high-speed component assembly, picking, and quality testing.", status: "Publish" },
-  { id: 6, title: "Annual Maintenance Contracts (AMC) & Support", slug: "annual-maintenance-contracts", short_description: "Priority preventative maintenance checkups, emergency breakdown visits, and spare parts sourcing.", status: "Publish" }
+  { id: 1, title: "Industrial Engineering", slug: "industrial-engineering", short_description: "Complete industrial engineering solutions from design to implementation, covering electrical and mechanical systems.", features: "Site Electrification,Cable Tray & Glandings,Piping & Structural works,Plant Commissioning Support", sort_order: 10, status: "Publish" },
+  { id: 2, title: "Industrial Automation", slug: "industrial-automation", short_description: "PLC, SCADA, DCS, and HMI-based automation systems for manufacturing and process industries.", features: "Siemens & Allen-Bradley PLCs,SCADA/HMI screen development,DCS Systems Integration,Machine Safety Audits", sort_order: 20, status: "Publish" },
+  { id: 3, title: "IoT Solutions", slug: "iiot-solutions", short_description: "Smart connected systems that enable real-time monitoring, predictive maintenance, and data-driven decisions.", features: "Edge Gateway setup,OPC-UA/MQTT protocol mapping,Cloud Dashboard development,Predictive Analytics", sort_order: 30, status: "Publish" },
+  { id: 4, title: "Electrical Panels", slug: "electrical-panels", short_description: "LT/HT electrical panels, MCC, PCC, power distribution boards, and custom switchgear fabrication.", features: "MCC and PCC Panels,Power Distribution Boards,Custom Busbar Fabrication,Load Testing & Certifications", sort_order: 40, status: "Publish" },
+  { id: 5, title: "Manufacturing Solutions", slug: "manufacturing-solutions", short_description: "End-to-end manufacturing execution systems and production line automation for Industry 4.0.", features: "ESD Safe Workbenches,Isolation Breaker Trolleys,Jigs and Assembly Fixtures,Material Handling Stools", sort_order: 50, status: "Publish" },
+  { id: 6, title: "Engineering Consultancy", slug: "engineering-consultancy", short_description: "Expert technical consultancy for plant layout, system design, energy audits, and compliance.", features: "Energy Audits & Reporting,Harmonic Analysis & Mitigation,Process Safety Consulting,Plant Layout & CAD Drafting", sort_order: 60, status: "Publish" }
 ];
 
 const INITIAL_PRODUCTS = [
