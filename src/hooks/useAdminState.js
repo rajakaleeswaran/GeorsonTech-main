@@ -77,16 +77,16 @@ const INITIAL_SOLUTION_CATEGORIES = [
 
 export default function useAdminState() {
 
-  const [token, setToken] = useState(() => localStorage.getItem('admin_token') || '');
+  const [token, setToken] = useState(() => sessionStorage.getItem('admin_token') || '');
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('admin_user');
+    const saved = sessionStorage.getItem('admin_user');
     try {
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('admin_token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!sessionStorage.getItem('admin_token'));
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Login Data
@@ -173,10 +173,13 @@ export default function useAdminState() {
   const [settingsForm, setSettingsForm] = useState({});
 
   const handleUnauthorized = () => {
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_user');
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     setIsAuthenticated(false);
     setUser(null);
+    setToken('');
     toast.error("Session expired or unauthorized. Please log in again.");
   };
 
@@ -218,7 +221,7 @@ export default function useAdminState() {
    * Automatically handles 401/403 by logging the user out (unless dev token).
    */
   const adminFetch = (url, options = {}) => {
-    const currentToken = token || localStorage.getItem('admin_token');
+    const currentToken = token || sessionStorage.getItem('admin_token');
     const isDevToken = currentToken === 'dev-admin-token';
     return fetch(url, {
       ...options,
@@ -235,7 +238,7 @@ export default function useAdminState() {
   /** Build JSON headers with Authorization bearer token */
   const apiHeaders = () => ({
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}`
+    'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}`
   });
 
   // ─── API DATA FETCHERS ────────────────────────────────────────────────────
@@ -411,8 +414,10 @@ export default function useAdminState() {
           const data = await res.json();
           const accessToken = data.accessToken || 'dev-admin-token';
           const userInfo = data.user || { username: emailInput, role: 'SUPER ADMIN' };
-          localStorage.setItem('admin_token', accessToken);
-          localStorage.setItem('admin_user', JSON.stringify(userInfo));
+          sessionStorage.setItem('admin_token', accessToken);
+          sessionStorage.setItem('admin_user', JSON.stringify(userInfo));
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
           setUser(userInfo); setToken(accessToken); setIsAuthenticated(true);
           toast.success('✅ Welcome back to CMS Workspace');
           setSubmitting(false);
@@ -460,8 +465,10 @@ export default function useAdminState() {
           role: data.user?.user_metadata?.role || 'SUPER ADMIN',
           id: data.user?.id,
         };
-        localStorage.setItem('admin_token', accessToken);
-        localStorage.setItem('admin_user', JSON.stringify(userInfo));
+        sessionStorage.setItem('admin_token', accessToken);
+        sessionStorage.setItem('admin_user', JSON.stringify(userInfo));
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
         setUser(userInfo); setToken(accessToken); setIsAuthenticated(true);
         toast.success('✅ Welcome back to CMS Workspace');
         setSubmitting(false);
@@ -473,8 +480,10 @@ export default function useAdminState() {
     // Works when both the backend and Supabase are unavailable
     if (isDevEmail && isDevPass) {
       const userInfo = { username: 'admin@georsontech.com', role: 'SUPER ADMIN' };
-      localStorage.setItem('admin_token', 'dev-admin-token');
-      localStorage.setItem('admin_user', JSON.stringify(userInfo));
+      sessionStorage.setItem('admin_token', 'dev-admin-token');
+      sessionStorage.setItem('admin_user', JSON.stringify(userInfo));
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
       setUser(userInfo); setToken('dev-admin-token'); setIsAuthenticated(true);
       toast.success('✅ Welcome back, Admin!');
       setSubmitting(false);
@@ -491,10 +500,13 @@ export default function useAdminState() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_user');
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     setIsAuthenticated(false);
     setUser(null);
+    setToken('');
     toast.info('Session closed');
   };
 
@@ -717,7 +729,7 @@ export default function useAdminState() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}` },
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
         body: formData
       });
       if (res.ok) {
@@ -794,7 +806,7 @@ export default function useAdminState() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}` },
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
         body: formData
       });
       if (res.ok) {
@@ -903,7 +915,7 @@ export default function useAdminState() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}` },
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
         body: formData
       });
       if (res.ok) {
@@ -959,7 +971,7 @@ export default function useAdminState() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}` },
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
         body: formData
       });
       if (res.ok) {
@@ -1020,7 +1032,7 @@ export default function useAdminState() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('admin_token')}` },
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
         body: formData
       });
       if (res.ok) {
