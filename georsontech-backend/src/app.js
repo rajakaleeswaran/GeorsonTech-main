@@ -46,7 +46,6 @@ import {
   createSolutionCategory, updateSolutionCategory, deleteSolutionCategory
 } from './controllers/solutionController.js';
 import { getSettings, updateSettings } from './controllers/settingsController.js';
-import { getLocations, createLocation, updateLocation, deleteLocation } from './controllers/locationController.js';
 import { getMedia, uploadMedia, deleteMedia } from './controllers/mediaController.js';
 import { trackVisitor, getVisitorStats } from './controllers/visitorController.js';
 import { exportSql, restoreSql, exportCsv } from './controllers/backupController.js';
@@ -172,9 +171,6 @@ app.get('/api/blogs/:slug', getBlogBySlug);
 // Website settings (logo, colors, meta)
 app.get('/api/settings', getSettings);
 
-// Office locations
-app.get('/api/locations', getLocations);
-
 // Global search
 app.get('/api/search', globalSearch);
 
@@ -256,11 +252,6 @@ adminRouter.get('/dashboard', async (req, res) => {
 
 // Settings (Super Admin only)
 adminRouter.put('/settings', authorizeRoles(R_SUPER), updateSettings);
-
-// Office Locations CRUD
-adminRouter.post('/locations', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), createLocation);
-adminRouter.put('/locations/:id', authorizeRoles(R_SUPER, R_WEBSITE), upload.single('image'), updateLocation);
-adminRouter.delete('/locations/:id', authorizeRoles(R_SUPER, R_WEBSITE), deleteLocation);
 
 // Enquiries (read + status update)
 adminRouter.get('/enquiries', authorizeRoles(R_SUPER, R_WEBSITE, R_SALES), getEnquiries);

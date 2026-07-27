@@ -28,7 +28,6 @@ import IndustriesTab from '../components/Admin/IndustriesTab';
 import ClientsTab from '../components/Admin/ClientsTab';
 import BlogsTab from '../components/Admin/BlogsTab';
 import SolutionsTab from '../components/Admin/SolutionsTab';
-import LocationsTab from '../components/Admin/LocationsTab';
 import EnquiriesTab from '../components/Admin/EnquiriesTab';
 import CareersTab from '../components/Admin/CareersTab';
 import SettingsTab from '../components/Admin/SettingsTab';
@@ -121,10 +120,6 @@ function Admin() {
 
               <button className={`admin-nav-item ${admin.activeTab === 'solution_categories' ? 'active' : ''}`} onClick={() => admin.setActiveTab('solution_categories')}>
                 <FaCogs /> Solution Categories
-              </button>
-
-              <button className={`admin-nav-item ${admin.activeTab === 'locations' ? 'active' : ''}`} onClick={() => admin.setActiveTab('locations')}>
-                <FaBuilding /> Offices CRUD
               </button>
 
               <button className={`admin-nav-item ${admin.activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => admin.setActiveTab('enquiries')}>
@@ -264,19 +259,6 @@ function Admin() {
                   deleteSolutionItem={admin.deleteSolutionItem}
                   saveSolutionCategory={admin.saveSolutionCategory}
                   deleteSolutionCategoryItem={admin.deleteSolutionCategoryItem}
-                />
-              )}
-
-              {admin.activeTab === 'locations' && (
-                <LocationsTab
-                  locations={admin.locations}
-                  editingLocation={admin.editingLocation}
-                  setEditingLocation={admin.setEditingLocation}
-                  locationForm={admin.locationForm}
-                  setLocationForm={admin.setLocationForm}
-                  saveLocation={admin.saveLocation}
-                  deleteLocationItem={admin.deleteLocationItem}
-                  startEditLocation={admin.startEditLocation}
                 />
               )}
 

@@ -11,39 +11,6 @@ import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../lib/api';
 
 
-const INITIAL_OFFICES = [
-  {
-    id: 1,
-    office_name: "Chennai Head Office",
-    office_type: "Registered Office",
-    address: "No. #4/8, Sriram Nagar Main Road, Karambakkam, Porur, Chennai – 600 116.",
-    phone: "+91 98407 80897",
-    email: "projects@georsontech.com",
-    google_map_link: "https://maps.google.com/maps?q=13.0370897,80.1510288&z=15&output=embed",
-    direct_map_link: "https://maps.app.goo.gl/hknZvLJfCXSG1mP46"
-  },
-  {
-    id: 2,
-    office_name: "Coimbatore Unit-1",
-    office_type: "Manufacturing Unit",
-    address: "Coimbatore, Tamil Nadu, India.",
-    phone: "+91 95000 81901",
-    email: "covai@georsontech.com",
-    google_map_link: "https://maps.google.com/maps?q=11.1840424,77.0238549&z=15&output=embed",
-    direct_map_link: "https://maps.app.goo.gl/J6vjApmbvH8SKBvy6"
-  },
-  {
-    id: 3,
-    office_name: "Coimbatore Unit-2",
-    office_type: "Service Unit",
-    address: "Coimbatore, Tamil Nadu, India.",
-    phone: "+91 95000 81901",
-    email: "covai@georsontech.com",
-    google_map_link: "https://maps.google.com/maps?q=10.9214335,76.9723988&z=15&output=embed",
-    direct_map_link: "https://maps.app.goo.gl/JN6vJMWp4aAeb4Kt9"
-  }
-];
-
 const INITIAL_CLIENTS = [
   { id: 1, name: "ABB", category: "Client", status: "Publish", logo_path: "uploads/images/ABB.png" },
   { id: 2, name: "AIRTRONIC", category: "Client", status: "Publish", logo_path: "uploads/images/AIRTRONIC.jpeg" },
@@ -161,7 +128,6 @@ export default function useAdminState() {
   const [editingIndustry, setEditingIndustry] = useState(null);
   const [editingClient, setEditingClient] = useState(null);
   const [editingBlog, setEditingBlog] = useState(null);
-  const [editingLocation, setEditingLocation] = useState(null);
   const [editingSolution, setEditingSolution] = useState(null);
   const [editingSolutionCategory, setEditingSolutionCategory] = useState(null);
 
@@ -204,10 +170,6 @@ export default function useAdminState() {
     seo_title: '', meta_description: '', seo_keywords: ''
   });
   const [blogImage, setBlogImage] = useState(null);
-
-  const [locationForm, setLocationForm] = useState({
-    office_name: '', office_type: '', address: '', phone: '', email: '', google_map_link: '', latitude: '', longitude: ''
-  });
 
   const [settingsForm, setSettingsForm] = useState({});
 
@@ -317,9 +279,6 @@ export default function useAdminState() {
       }
     } catch (_) { /* retain empty settings */ }
   };
-
-  // Fetch office locations (Chennai HO, Coimbatore units, etc.)
-  const fetchLocations = () => fetchWithFallback('/locations', 'office_locations', setLocations, 'id');
 
   // Fetch products and their categories
   const fetchProducts = async () => {
@@ -634,71 +593,6 @@ export default function useAdminState() {
     }
   };
 
-
-  // Location CRUD
-  const saveLocation = async (e) => {
-    e.preventDefault();
-    const method = editingLocation === 'new' ? 'POST' : 'PUT';
-    const url = editingLocation === 'new' 
-      ? `${API_BASE_URL}/admin/locations`
-      : `${API_BASE_URL}/admin/locations/${editingLocation.id}`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: apiHeaders(),
-        body: JSON.stringify(locationForm)
-      });
-      if (res.ok) {
-        toast.success("Office location saved");
-        setEditingLocation(null);
-        fetchLocations();
-        return;
-      }
-    } catch (_) { /* API offline */ }
-
-    // Offline fallback: update local state directly
-    if (editingLocation === 'new') {
-      const newLoc = { id: Date.now(), ...locationForm };
-      setLocations(prev => [...prev, newLoc]);
-      toast.success("Location saved locally (offline mode)");
-    } else {
-      setLocations(prev => prev.map(l => l.id === editingLocation.id ? { ...l, ...locationForm } : l));
-      toast.success("Location updated locally (offline mode)");
-    }
-    setEditingLocation(null);
-  };
-
-  const startEditLocation = (loc) => {
-    setEditingLocation(loc);
-    setLocationForm({
-      office_name: loc.office_name || '',
-      office_type: loc.office_type || '',
-      address: loc.address || '',
-      phone: loc.phone || '',
-      email: loc.email || '',
-      google_map_link: loc.google_map_link || '',
-      latitude: loc.latitude || '',
-      longitude: loc.longitude || ''
-    });
-  };
-
-  const deleteLocationItem = (id) => {
-    if (window.confirm("Delete this office location?")) {
-      fetch(`${API_BASE_URL}/admin/locations/${id}`, {
-        method: 'DELETE',
-        headers: apiHeaders()
-      })
-        .then(res => {
-          if (res.ok) {
-            toast.info("Office location deleted");
-            fetchLocations();
-          } else {
-            res.json().then(d => toast.error(d.message || "Failed to delete"));
-          }
-        });
-    }
-  };
 
   // Solutions CRUD handlers
   const saveSolution = (e) => {
@@ -1306,9 +1200,6 @@ export default function useAdminState() {
     changeEnquiryStatus,
     changeCareerStatus,
     saveSettings,
-    saveLocation,
-    startEditLocation,
-    deleteLocationItem,
     saveSolution,
     deleteSolutionItem,
     saveSolutionCategory,
