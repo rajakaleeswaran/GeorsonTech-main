@@ -929,9 +929,13 @@ export default function useAdminState() {
         setServiceBrochure(null);
         fetchServices();
         return;
+      } else {
+        console.error("Supabase service save error:", supaRes.error);
+        toast.error(`Cloud DB error: ${supaRes.error.message}`);
       }
     } catch (err) {
       console.warn("Supabase service save exception:", err);
+      toast.error(`Supabase exception: ${err.message}`);
     }
 
     // Offline fallback
