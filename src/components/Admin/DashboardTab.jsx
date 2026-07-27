@@ -98,7 +98,7 @@ function DashboardTab({
         <div className="enquiry-info-card">
           <h4 style={{ margin: '0 0 16px', fontSize: '15px' }}>Visitor Device Types</h4>
           <ul>
-            {visitorBreakdown.devices.map((d, i) => (
+            {(visitorBreakdown?.devices || []).map((d, i) => (
               <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{d.device}</span> <strong>{d.count} views</strong>
               </li>
@@ -109,7 +109,7 @@ function DashboardTab({
         <div className="enquiry-info-card">
           <h4 style={{ margin: '0 0 16px', fontSize: '15px' }}>Country Locations</h4>
           <ul>
-            {visitorBreakdown.countries.map((c, i) => (
+            {(visitorBreakdown?.countries || []).map((c, i) => (
               <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{c.country}</span> <strong>{c.count} logs</strong>
               </li>

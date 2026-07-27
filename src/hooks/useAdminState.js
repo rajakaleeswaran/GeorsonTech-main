@@ -108,7 +108,6 @@ export default function useAdminState() {
   const [productCategories, setProductCategories] = useState(INITIAL_PRODUCT_CATEGORIES);
   const [blogs, setBlogs] = useState(INITIAL_BLOGS);
   const [blogCategories, setBlogCategories] = useState(INITIAL_BLOG_CATEGORIES);
-  const [locations, setLocations] = useState(INITIAL_OFFICES);
   const [services, setServices] = useState(INITIAL_SERVICES);
   const [industries, setIndustries] = useState(INITIAL_INDUSTRIES);
   const [clients, setClients] = useState(INITIAL_CLIENTS);
@@ -361,7 +360,6 @@ export default function useAdminState() {
     if (isAuthenticated) {
       fetchDashboardMetrics();
       fetchSettings();
-      fetchLocations();
       fetchProducts();
       fetchBlogs();
       fetchServices();
@@ -1160,7 +1158,6 @@ export default function useAdminState() {
     productCategories,
     blogs,
     blogCategories,
-    locations,
     services,
     industries,
     clients,
@@ -1174,7 +1171,6 @@ export default function useAdminState() {
     editingIndustry, setEditingIndustry,
     editingClient, setEditingClient,
     editingBlog, setEditingBlog,
-    editingLocation, setEditingLocation,
     editingSolution, setEditingSolution,
     editingSolutionCategory, setEditingSolutionCategory,
     solutionForm, setSolutionForm,
@@ -1193,7 +1189,6 @@ export default function useAdminState() {
     setClientLogo,
     blogForm, setBlogForm,
     setBlogImage,
-    locationForm, setLocationForm,
     settingsForm, setSettingsForm,
     handleLoginSubmit,
     handleLogout,
