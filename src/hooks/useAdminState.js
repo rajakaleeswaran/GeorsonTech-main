@@ -19,7 +19,8 @@ const INITIAL_OFFICES = [
     address: "No. #4/8, Sriram Nagar Main Road, Karambakkam, Porur, Chennai – 600 116.",
     phone: "+91 98407 80897",
     email: "projects@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.079207050303!2d80.1570535!3d12.9922097!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTLCsDU5JzMxLjEiTiA4MMKwMDknMzMuMyJF!5e0!3m2!1sen!2sin!4v1688123456789"
+    google_map_link: "https://maps.google.com/maps?q=13.0370897,80.1510288&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/hknZvLJfCXSG1mP46"
   },
   {
     id: 2,
@@ -28,7 +29,8 @@ const INITIAL_OFFICES = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 95000 81901",
     email: "covai@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456790"
+    google_map_link: "https://maps.google.com/maps?q=11.1840424,77.0238549&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/J6vjApmbvH8SKBvy6"
   },
   {
     id: 3,
@@ -37,7 +39,8 @@ const INITIAL_OFFICES = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 95000 81901",
     email: "covai@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456791"
+    google_map_link: "https://maps.google.com/maps?q=10.9214335,76.9723988&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/JN6vJMWp4aAeb4Kt9"
   }
 ];
 

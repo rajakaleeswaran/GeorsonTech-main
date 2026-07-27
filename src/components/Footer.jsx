@@ -19,7 +19,8 @@ const FALLBACK_OFFICES = [
     address: "No. #4/8, Sriram Nagar Main Road, Karambakkam, Porur, Chennai – 600 116.",
     phone: "+91 98407 80897",
     email: "projects@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.079207050303!2d80.1570535!3d12.9922097!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTLCsDU5JzMxLjEiTiA4MMKwMDknMzMuMyJF!5e0!3m2!1sen!2sin!4v1688123456789"
+    google_map_link: "https://maps.google.com/maps?q=13.0370897,80.1510288&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/hknZvLJfCXSG1mP46"
   },
   {
     id: 2,
@@ -28,7 +29,8 @@ const FALLBACK_OFFICES = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 95000 81901",
     email: "covai@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456790"
+    google_map_link: "https://maps.google.com/maps?q=11.1840424,77.0238549&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/J6vjApmbvH8SKBvy6"
   },
   {
     id: 3,
@@ -37,7 +39,8 @@ const FALLBACK_OFFICES = [
     address: "Coimbatore, Tamil Nadu, India.",
     phone: "+91 95000 81901",
     email: "covai@georsontech.com",
-    google_map_link: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456791"
+    google_map_link: "https://maps.google.com/maps?q=10.9214335,76.9723988&z=15&output=embed",
+    direct_map_link: "https://maps.app.goo.gl/JN6vJMWp4aAeb4Kt9"
   }
 ];
 
@@ -100,11 +103,51 @@ function Footer() {
   const getLogoSrc = () => {
     if (!settings || !settings.logo_url) return LogoImg;
     const url = getAssetUrl(settings.logo_url);
-    // If running on non-localhost environment (like Vercel) and URL points to localhost, use bundled LogoImg
     if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && url.includes('localhost')) {
       return LogoImg;
     }
     return url;
+  };
+
+  const getEmbedMapUrl = (loc) => {
+    if (!loc) return '';
+    const link = loc.google_map_link || '';
+    if (link.includes('maps.app.goo.gl') || link.includes('goo.gl/maps') || !link.includes('output=embed')) {
+      if (loc.latitude && loc.longitude) {
+        return `https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=15&output=embed`;
+      }
+      if (loc.office_name?.includes('Chennai')) {
+        return `https://maps.google.com/maps?q=13.0370897,80.1510288&z=15&output=embed`;
+      }
+      if (loc.office_name?.includes('Unit-1') || loc.office_name?.includes('Unit 1') || loc.office_name?.includes('Unit-I')) {
+        return `https://maps.google.com/maps?q=11.1840424,77.0238549&z=15&output=embed`;
+      }
+      if (loc.office_name?.includes('Unit-2') || loc.office_name?.includes('Unit 2') || loc.office_name?.includes('Unit-II')) {
+        return `https://maps.google.com/maps?q=10.9214335,76.9723988&z=15&output=embed`;
+      }
+    }
+    return link;
+  };
+
+  const getDirectMapUrl = (loc) => {
+    if (!loc) return '#';
+    if (loc.direct_map_link) return loc.direct_map_link;
+    if (loc.google_map_link && (loc.google_map_link.includes('maps.app.goo.gl') || loc.google_map_link.includes('goo.gl/maps'))) {
+      return loc.google_map_link;
+    }
+    if (loc.office_name?.includes('Chennai')) {
+      return 'https://maps.app.goo.gl/hknZvLJfCXSG1mP46';
+    }
+    if (loc.office_name?.includes('Unit-1') || loc.office_name?.includes('Unit 1') || loc.office_name?.includes('Unit-I')) {
+      return 'https://maps.app.goo.gl/J6vjApmbvH8SKBvy6';
+    }
+    if (loc.office_name?.includes('Unit-2') || loc.office_name?.includes('Unit 2') || loc.office_name?.includes('Unit-II')) {
+      return 'https://maps.app.goo.gl/JN6vJMWp4aAeb4Kt9';
+    }
+    if (loc.latitude && loc.longitude) {
+      return `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`;
+    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.address || loc.office_name)}`;
   };
 
   return (
@@ -133,8 +176,6 @@ function Footer() {
             <a href="https://pin.it/1HN8gSx89" target="_blank" rel="noopener noreferrer" aria-label="Pinterest"><FaPinterestP /></a>
             <a href="https://youtube.com/@georsontech_india?si=nDzNJQRTZdgTEo0V" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
           </div>
-
-
         </div>
 
         {/* Column 2: Quick Links */}
@@ -220,34 +261,48 @@ function Footer() {
       
       {/* Dynamic Google Maps embed section for all three offices */}
       <div className="footer-maps-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', paddingBottom: '30px' }}>
-        {offices.map((office) => (
-          <div key={office.id || office.office_name} style={{ background: '#0b1329', border: '1px solid #1e293b', borderRadius: '8px', padding: '15px', overflow: 'hidden' }}>
-            <h5 style={{ color: '#0093DD', fontWeight: '700', fontSize: '13px', marginBottom: '6px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FaMapMarkerAlt /> {office.office_name}
-            </h5>
-            <p style={{ color: '#94a3b8', fontSize: '11.5px', lineHeight: '1.4', marginBottom: '10px', minHeight: '34px' }}>
-              {office.address}
-            </p>
-            {office.google_map_link ? (
-              <div style={{ width: '100%', height: '140px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #1e293b' }}>
-                <iframe
-                  src={office.google_map_link}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title={office.office_name}
-                ></iframe>
+        {offices.map((office) => {
+          const embedUrl = getEmbedMapUrl(office);
+          const directUrl = getDirectMapUrl(office);
+          return (
+            <div key={office.id || office.office_name} style={{ background: '#0b1329', border: '1px solid #1e293b', borderRadius: '8px', padding: '15px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <h5 style={{ color: '#0093DD', fontWeight: '700', fontSize: '13px', margin: 0, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FaMapMarkerAlt /> {office.office_name}
+                </h5>
+                <a
+                  href={directUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#38bdf8', fontSize: '11px', fontWeight: '600', textDecoration: 'underline' }}
+                >
+                  Maps ↗
+                </a>
               </div>
-            ) : (
-              <div style={{ width: '100%', height: '140px', borderRadius: '6px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px' }}>
-                Map location not configured
-              </div>
-            )}
-          </div>
-        ))}
+              <p style={{ color: '#94a3b8', fontSize: '11.5px', lineHeight: '1.4', marginBottom: '10px', minHeight: '34px' }}>
+                {office.address}
+              </p>
+              {embedUrl ? (
+                <div style={{ width: '100%', height: '140px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+                  <iframe
+                    src={embedUrl}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={office.office_name}
+                  ></iframe>
+                </div>
+              ) : (
+                <div style={{ width: '100%', height: '140px', borderRadius: '6px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px' }}>
+                  Map location not configured
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Bottom Bar */}

@@ -270,9 +270,9 @@ CREATE TABLE IF NOT EXISTS office_locations (
 
 -- Seed initial office locations
 INSERT INTO office_locations (office_name, office_type, address, phone, email, google_map_link, latitude, longitude) VALUES
-('Chennai Head Office', 'Registered Office', 'No. #4/8, Sriram Nagar Main Road, Karambakkam, Porur, Chennai – 600 116.', '+91 98407 80897', 'projects@georsontech.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.079207050303!2d80.1570535!3d12.9922097!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTLCsDU5JzMxLjEiTiA4MMKwMDknMzMuMyJF!5e0!3m2!1sen!2sin!4v1688123456789', 12.99220970, 80.15705350),
-('Coimbatore UNIT-1', 'Manufacturing Unit', 'Coimbatore, Tamil Nadu, India.', '+91 95000 81901', 'georsontech@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456790', 11.01684450, 76.88483260),
-('Coimbatore UNIT-2', 'Service Unit', 'Coimbatore, Tamil Nadu, India.', '+91 95000 81901', 'service@georsontech.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125320.1706692237!2d76.88483259999999!3d11.0168445!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859af2f971cb5%3A0x2fc1c81e183ed282!2sCoimbatore%2C%20Tamil%20Nadu!5e0!3m2!1sen!2sin!4v1688123456791', 11.01684450, 76.88483260)
+('Chennai Head Office', 'Registered Office', 'No. #4/8, Sriram Nagar Main Road, Karambakkam, Porur, Chennai – 600 116.', '+91 98407 80897', 'projects@georsontech.com', 'https://maps.google.com/maps?q=13.0370897,80.1510288&z=15&output=embed', 13.03708970, 80.15102880),
+('Coimbatore UNIT-1', 'Manufacturing Unit', 'Coimbatore, Tamil Nadu, India.', '+91 95000 81901', 'covai@georsontech.com', 'https://maps.google.com/maps?q=11.1840424,77.0238549&z=15&output=embed', 11.18404240, 77.02385490),
+('Coimbatore UNIT-2', 'Service Unit', 'Coimbatore, Tamil Nadu, India.', '+91 95000 81901', 'covai@georsontech.com', 'https://maps.google.com/maps?q=10.9214335,76.9723988&z=15&output=embed', 10.92143350, 76.97239880)
 ON DUPLICATE KEY UPDATE address=VALUES(address);
 
 -- 17. Media Library
