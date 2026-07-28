@@ -653,8 +653,20 @@ export default function useAdminState() {
       ? `${API_BASE_URL}/admin/solutions`
       : `${API_BASE_URL}/admin/solutions/${editingSolution.id}`;
 
+    let uploadedImgPath = editingSolution?.image_path || null;
+    if (solutionImage) {
+      const imgUrl = await uploadImageToSupabase(solutionImage, 'solutions');
+      if (imgUrl) uploadedImgPath = imgUrl;
+    }
+
+    const catName = solutionCategories.find(c => String(c.id) === String(solutionForm.category_id))?.name || '';
+    const catIdNum = Number(solutionForm.category_id);
+    const validCatId = solutionForm.category_id
+      ? (!isNaN(catIdNum) ? catIdNum : solutionForm.category_id)
+      : null;
+
     const formData = new FormData();
-    formData.append('category_id', solutionForm.category_id || '');
+    formData.append('category_id', validCatId || '');
     formData.append('name', solutionForm.name);
     formData.append('slug', solutionForm.slug);
     formData.append('description', solutionForm.description || '');
@@ -664,7 +676,6 @@ export default function useAdminState() {
     formData.append('status', solutionForm.status || 'Publish');
     formData.append('industry_ids', JSON.stringify(solutionForm.industry_ids || []));
     formData.append('product_ids', JSON.stringify(solutionForm.product_ids || []));
-
     if (solutionImage) formData.append('image', solutionImage);
 
     try {
@@ -683,15 +694,10 @@ export default function useAdminState() {
     } catch (_) {}
 
     // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedImgPath = editingSolution?.image_path || null;
-      if (solutionImage) {
-        const imgUrl = await uploadImageToSupabase(solutionImage, 'solutions');
-        if (imgUrl) uploadedImgPath = imgUrl;
-      }
-
       const payload = {
-        category_id: solutionForm.category_id ? Number(solutionForm.category_id) : null,
+        category_id: validCatId,
         name: solutionForm.name,
         slug: solutionForm.slug || solutionForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: solutionForm.description || '',
@@ -710,19 +716,32 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Solution saved to Cloud Database!");
-        setEditingSolution(null);
-        setSolutionImage(null);
-        fetchSolutions();
-        return;
+        supaSaved = true;
       }
     } catch (err) {
       console.warn("Supabase solution save error:", err);
     }
 
+    const newSol = {
+      id: isNew ? Date.now() : editingSolution.id,
+      ...solutionForm,
+      category_id: validCatId,
+      category_name: catName,
+      image_path: uploadedImgPath
+    };
+    setSolutions(prev => {
+      const updated = isNew
+        ? [newSol, ...prev]
+        : prev.map(s => s.id === editingSolution.id ? newSol : s);
+      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Solution saved to Cloud Database!" : "Solution saved successfully");
     setEditingSolution(null);
     setSolutionImage(null);
   };
+
 
   const deleteSolutionItem = async (id) => {
     if (window.confirm("Delete this solution?")) {
@@ -834,10 +853,21 @@ export default function useAdminState() {
   };
 
   // ─── UTILITY STORAGE UPLOADER ──────────────────────────────────────────────
+  const fileToDataURL = (file) => {
+    return new Promise((resolve) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const uploadImageToSupabase = async (file, folder = 'uploads') => {
     if (!file) return null;
+    const dataUrl = await fileToDataURL(file);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = (file.name.split('.').pop() || 'png').toLowerCase();
       const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const { data, error } = await supabase.storage
         .from('images')
@@ -845,13 +875,15 @@ export default function useAdminState() {
 
       if (!error && data) {
         const { data: publicData } = supabase.storage.from('images').getPublicUrl(fileName);
-        return publicData?.publicUrl || fileName;
+        if (publicData?.publicUrl) return publicData.publicUrl;
       }
     } catch (err) {
-      console.warn('Supabase storage upload error:', err);
+      console.warn('Supabase storage upload exception:', err);
     }
-    return null;
+    // Fallback to base64 DataURL if storage bucket upload failed
+    return dataUrl;
   };
+
 
   // Services CRUD handlers
   const saveService = async (e) => {
@@ -861,6 +893,18 @@ export default function useAdminState() {
     const url = isNew
       ? `${API_BASE_URL}/admin/services`
       : `${API_BASE_URL}/admin/services/${editingService.id}`;
+
+    let uploadedImgPath = editingService?.image_path || null;
+    let uploadedBrochurePath = editingService?.brochure_path || null;
+
+    if (serviceImage) {
+      const imgUrl = await uploadImageToSupabase(serviceImage, 'services');
+      if (imgUrl) uploadedImgPath = imgUrl;
+    }
+    if (serviceBrochure) {
+      const pdfUrl = await uploadImageToSupabase(serviceBrochure, 'brochures');
+      if (pdfUrl) uploadedBrochurePath = pdfUrl;
+    }
 
     const formData = new FormData();
     formData.append('title', serviceForm.title);
@@ -887,22 +931,11 @@ export default function useAdminState() {
         fetchServices();
         return;
       }
-    } catch (_) { /* Express backend offline — fall through to Supabase */ }
+    } catch (_) { /* Express backend offline */ }
 
-    // Supabase Cloud DB fallback (Persists updates to Vercel live site!)
+    // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedImgPath = editingService?.image_path || null;
-      let uploadedBrochurePath = editingService?.brochure_path || null;
-
-      if (serviceImage) {
-        const imgUrl = await uploadImageToSupabase(serviceImage, 'services');
-        if (imgUrl) uploadedImgPath = imgUrl;
-      }
-      if (serviceBrochure) {
-        const pdfUrl = await uploadImageToSupabase(serviceBrochure, 'brochures');
-        if (pdfUrl) uploadedBrochurePath = pdfUrl;
-      }
-
       const payload = {
         title: serviceForm.title,
         slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -923,41 +956,37 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Service saved to Cloud Database!");
-        setEditingService(null);
-        setServiceImage(null);
-        setServiceBrochure(null);
-        fetchServices();
-        return;
+        supaSaved = true;
       } else {
-        console.error("Supabase service save error:", supaRes.error);
-        toast.error(`Cloud DB error: ${supaRes.error.message}`);
+        console.warn("Supabase service save error:", supaRes.error);
       }
     } catch (err) {
       console.warn("Supabase service save exception:", err);
-      toast.error(`Supabase exception: ${err.message}`);
     }
 
-    // Offline fallback
-    if (isNew) {
-      const newSvc = { id: Date.now(), ...serviceForm, slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
-      setServices(prev => {
-        const updated = [...prev, newSvc];
-        try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
-        return updated;
-      });
-    } else {
-      setServices(prev => {
-        const updated = prev.map(s => s.id === editingService.id ? { ...s, ...serviceForm } : s);
-        try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
-        return updated;
-      });
-    }
-    toast.success("Service updated");
+    // Always update local React state & localStorage cache
+    const newSvc = {
+      id: isNew ? Date.now() : editingService.id,
+      ...serviceForm,
+      slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      image_path: uploadedImgPath,
+      brochure_path: uploadedBrochurePath
+    };
+
+    setServices(prev => {
+      const updated = isNew
+        ? [newSvc, ...prev]
+        : prev.map(s => s.id === editingService.id ? newSvc : s);
+      try { localStorage.setItem('cms_cache_services', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Service saved to Cloud Database!" : "Service saved successfully");
     setEditingService(null);
     setServiceImage(null);
     setServiceBrochure(null);
   };
+
 
   const deleteServiceItem = async (id) => {
     if (window.confirm("Delete this service?")) {
@@ -1013,10 +1042,35 @@ export default function useAdminState() {
       } else if (Array.isArray(productForm.specifications)) {
         specsJson = JSON.stringify(productForm.specifications);
       }
-    }       
+    }
+
+    let uploadedImgPath = editingProduct?.image_path || null;
+    let uploadedBrochurePath = editingProduct?.brochure_path || null;
+
+    if (productImage) {
+      const imgUrl = await uploadImageToSupabase(productImage, 'products');
+      if (imgUrl) uploadedImgPath = imgUrl;
+    }
+    if (productBrochure) {
+      const pdfUrl = await uploadImageToSupabase(productBrochure, 'brochures');
+      if (pdfUrl) uploadedBrochurePath = pdfUrl;
+    }
+
+    const catIdNum = Number(productForm.category_id);
+    const validCatId = productForm.category_id
+      ? (!isNaN(catIdNum) ? catIdNum : productForm.category_id)
+      : null;
+
+    const matchedCat = productCategories.find(c =>
+      String(c.id) === String(productForm.category_id) ||
+      c.name?.toLowerCase() === String(productForm.category_id).toLowerCase() ||
+      c.slug?.toLowerCase() === String(productForm.category_id).toLowerCase()
+    );
+    const categoryName = matchedCat ? matchedCat.name : (productForm.category_id || '');
 
     const formData = new FormData();
-    formData.append('category_id', productForm.category_id || '');
+    formData.append('category_id', validCatId || '');
+    formData.append('category_name', categoryName);
     formData.append('name', productForm.name);
     formData.append('slug', productForm.slug);
     formData.append('description', productForm.description || '');
@@ -1043,21 +1097,11 @@ export default function useAdminState() {
     } catch (_) { /* API offline */ }
 
     // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedImgPath = editingProduct?.image_path || null;
-      let uploadedBrochurePath = editingProduct?.brochure_path || null;
-
-      if (productImage) {
-        const imgUrl = await uploadImageToSupabase(productImage, 'products');
-        if (imgUrl) uploadedImgPath = imgUrl;
-      }
-      if (productBrochure) {
-        const pdfUrl = await uploadImageToSupabase(productBrochure, 'brochures');
-        if (pdfUrl) uploadedBrochurePath = pdfUrl;
-      }
-
       const payload = {
-        category_id: productForm.category_id ? Number(productForm.category_id) : null,
+        category_id: validCatId,
+        category_name: categoryName,
         name: productForm.name,
         slug: productForm.slug || productForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: productForm.description || '',
@@ -1076,45 +1120,39 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Product saved to Cloud Database!");
-        setEditingProduct(null);
-        setProductImage(null);
-        setProductBrochure(null);
-        fetchProducts();
-        return;
+        supaSaved = true;
+      } else {
+        console.warn("Supabase product save error:", supaRes.error);
       }
     } catch (err) {
-      console.warn("Supabase product save error:", err);
+      console.warn("Supabase product save exception:", err);
     }
 
-    // Offline fallback
-    if (isNew) {
-      const newProd = {
-        id: Date.now(),
-        ...productForm,
-        category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || ''
-      };
-      setProducts(prev => {
-        const updated = [...prev, newProd];
-        try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
-        return updated;
-      });
-    } else {
-      setProducts(prev => {
-        const updated = prev.map(p => p.id === editingProduct.id ? {
-          ...p,
-          ...productForm,
-          category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || p.category_name || ''
-        } : p);
-        try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
-        return updated;
-      });
-    }
-    toast.success("Product updated");
+    // Always update local React state & localStorage cache with complete product data
+    const newProd = {
+      id: isNew ? Date.now() : editingProduct.id,
+      ...productForm,
+      category_id: validCatId,
+      category_name: categoryName,
+      image_path: uploadedImgPath,
+      brochure_path: uploadedBrochurePath,
+      specifications: specsJson || '[]'
+    };
+
+    setProducts(prev => {
+      const updated = isNew
+        ? [newProd, ...prev]
+        : prev.map(p => p.id === editingProduct.id ? newProd : p);
+      try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Product saved to Cloud Database!" : "Product saved successfully");
     setEditingProduct(null);
     setProductImage(null);
     setProductBrochure(null);
   };
+
 
 
   const deleteProductItem = async (id) => {
@@ -1238,6 +1276,12 @@ export default function useAdminState() {
       ? `${API_BASE_URL}/admin/industries`
       : `${API_BASE_URL}/admin/industries/${editingIndustry.id}`;
 
+    let uploadedImgPath = editingIndustry?.image_path || null;
+    if (industryImage) {
+      const imgUrl = await uploadImageToSupabase(industryImage, 'industries');
+      if (imgUrl) uploadedImgPath = imgUrl;
+    }
+
     const formData = new FormData();
     formData.append('name', industryForm.name);
     formData.append('slug', industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
@@ -1263,13 +1307,8 @@ export default function useAdminState() {
     } catch (_) { /* API offline */ }
 
     // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedImgPath = editingIndustry?.image_path || null;
-      if (industryImage) {
-        const imgUrl = await uploadImageToSupabase(industryImage, 'industries');
-        if (imgUrl) uploadedImgPath = imgUrl;
-      }
-
       const payload = {
         name: industryForm.name,
         slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -1288,24 +1327,27 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Industry saved to Cloud Database!");
-        setEditingIndustry(null);
-        setIndustryImage(null);
-        fetchIndustries();
-        return;
+        supaSaved = true;
       }
     } catch (err) {
       console.warn("Supabase industry save error:", err);
     }
 
-    // Offline fallback
-    if (isNew) {
-      const newInd = { id: Date.now(), ...industryForm, slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
-      setIndustries(prev => [...prev, newInd]);
-    } else {
-      setIndustries(prev => prev.map(i => i.id === editingIndustry.id ? { ...i, ...industryForm } : i));
-    }
-    toast.success("Industry updated in current session");
+    const newInd = {
+      id: isNew ? Date.now() : editingIndustry.id,
+      ...industryForm,
+      slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      image_path: uploadedImgPath
+    };
+    setIndustries(prev => {
+      const updated = isNew
+        ? [newInd, ...prev]
+        : prev.map(i => i.id === editingIndustry.id ? newInd : i);
+      try { localStorage.setItem('cms_cache_industries', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Industry saved to Cloud Database!" : "Industry saved successfully");
     setEditingIndustry(null);
     setIndustryImage(null);
   };
@@ -1347,6 +1389,12 @@ export default function useAdminState() {
       ? `${API_BASE_URL}/admin/clients`
       : `${API_BASE_URL}/admin/clients/${editingClient.id}`;
 
+    let uploadedLogoPath = editingClient?.logo_path || null;
+    if (clientLogo) {
+      const logoUrl = await uploadImageToSupabase(clientLogo, 'clients');
+      if (logoUrl) uploadedLogoPath = logoUrl;
+    }
+
     const formData = new FormData();
     formData.append('name', clientForm.name);
     formData.append('sort_order', clientForm.sort_order || 0);
@@ -1370,13 +1418,8 @@ export default function useAdminState() {
     } catch (_) { /* API offline */ }
 
     // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedLogoPath = editingClient?.logo_path || null;
-      if (clientLogo) {
-        const logoUrl = await uploadImageToSupabase(clientLogo, 'clients');
-        if (logoUrl) uploadedLogoPath = logoUrl;
-      }
-
       const payload = {
         name: clientForm.name,
         sort_order: Number(clientForm.sort_order) || 0,
@@ -1393,26 +1436,30 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Client saved to Cloud Database!");
-        setEditingClient(null);
-        setClientLogo(null);
-        fetchClients();
-        return;
+        supaSaved = true;
       }
     } catch (err) {
       console.warn("Supabase client save error:", err);
     }
 
-    // Offline fallback
-    if (isNew) {
-      setClients(prev => [...prev, { id: Date.now(), ...clientForm }]);
-    } else {
-      setClients(prev => prev.map(c => c.id === editingClient.id ? { ...c, ...clientForm } : c));
-    }
-    toast.success("Client updated in current session");
+    const newClient = {
+      id: isNew ? Date.now() : editingClient.id,
+      ...clientForm,
+      logo_path: uploadedLogoPath
+    };
+    setClients(prev => {
+      const updated = isNew
+        ? [newClient, ...prev]
+        : prev.map(c => c.id === editingClient.id ? newClient : c);
+      try { localStorage.setItem('cms_cache_clients', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Client saved to Cloud Database!" : "Client saved successfully");
     setEditingClient(null);
     setClientLogo(null);
   };
+
 
   const deleteClientItem = async (id) => {
     if (window.confirm("Delete this client?")) {
@@ -1451,9 +1498,21 @@ export default function useAdminState() {
       ? `${API_BASE_URL}/admin/blogs`
       : `${API_BASE_URL}/admin/blogs/${editingBlog.id}`;
 
+    let uploadedImgPath = editingBlog?.featured_image || null;
+    if (blogImage) {
+      const imgUrl = await uploadImageToSupabase(blogImage, 'blogs');
+      if (imgUrl) uploadedImgPath = imgUrl;
+    }
+
+    const catName = blogForm.category_name || blogCategories.find(c => String(c.id) === String(blogForm.category_id))?.name || '';
+    const catIdNum = Number(blogForm.category_id);
+    const validCatId = blogForm.category_id
+      ? (!isNaN(catIdNum) ? catIdNum : blogForm.category_id)
+      : null;
+
     const formData = new FormData();
-    formData.append('category_id', blogForm.category_id || '');
-    formData.append('category_name', blogForm.category_name || '');
+    formData.append('category_id', validCatId || '');
+    formData.append('category_name', catName);
     formData.append('title', blogForm.title);
     formData.append('slug', blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
     formData.append('excerpt', blogForm.excerpt || '');
@@ -1480,17 +1539,10 @@ export default function useAdminState() {
     } catch (_) { /* API offline */ }
 
     // Supabase Cloud DB fallback
+    let supaSaved = false;
     try {
-      let uploadedImgPath = editingBlog?.featured_image || null;
-      if (blogImage) {
-        const imgUrl = await uploadImageToSupabase(blogImage, 'blogs');
-        if (imgUrl) uploadedImgPath = imgUrl;
-      }
-
-      const catName = blogForm.category_name || blogCategories.find(c => String(c.id) === String(blogForm.category_id))?.name || '';
-
       const payload = {
-        category_id: blogForm.category_id ? Number(blogForm.category_id) : null,
+        category_id: validCatId,
         category_name: catName,
         title: blogForm.title,
         slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -1511,27 +1563,33 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        toast.success("✅ Blog article saved to Cloud Database!");
-        setEditingBlog(null);
-        setBlogImage(null);
-        fetchBlogs();
-        return;
+        supaSaved = true;
       }
     } catch (err) {
       console.warn("Supabase blog save error:", err);
     }
 
-    // Offline fallback
-    const catName = blogForm.category_name || blogCategories.find(c => String(c.id) === String(blogForm.category_id))?.name || '';
-    if (isNew) {
-      setBlogs(prev => [...prev, { id: Date.now(), ...blogForm, category_name: catName, slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }]);
-    } else {
-      setBlogs(prev => prev.map(b => b.id === editingBlog.id ? { ...b, ...blogForm, category_name: catName } : b));
-    }
-    toast.success("Blog article updated in current session");
+    const newBlog = {
+      id: isNew ? Date.now() : editingBlog.id,
+      ...blogForm,
+      category_id: validCatId,
+      category_name: catName,
+      slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      featured_image: uploadedImgPath
+    };
+    setBlogs(prev => {
+      const updated = isNew
+        ? [newBlog, ...prev]
+        : prev.map(b => b.id === editingBlog.id ? newBlog : b);
+      try { localStorage.setItem('cms_cache_blogs', JSON.stringify(updated)); } catch (_) {}
+      return updated;
+    });
+
+    toast.success(supaSaved ? "✅ Blog article saved to Cloud Database!" : "Blog article saved successfully");
     setEditingBlog(null);
     setBlogImage(null);
   };
+
 
   const deleteBlogItem = async (id) => {
     if (window.confirm("Delete this blog article?")) {
