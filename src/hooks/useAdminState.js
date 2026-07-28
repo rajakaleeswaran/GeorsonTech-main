@@ -800,8 +800,9 @@ export default function useAdminState() {
         service_descriptions: solutionForm.service_descriptions || '',
         sort_order: Number(solutionForm.sort_order) || 0,
         status: solutionForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, solutionImage?.name || 'solution.png') } : {})
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
       };
+
 
       let supaRes;
       if (isNew) {
@@ -812,11 +813,16 @@ export default function useAdminState() {
 
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Solution saved to Cloud Database!");
+        setEditingSolution(null);
+        setSolutionImage(null);
+        fetchSolutions();
+        return;
       }
     } catch (err) {
       console.warn("Supabase solution save error:", err);
     }
+
 
     const newSol = {
       id: isNew ? Date.now() : editingSolution.id,
@@ -959,18 +965,44 @@ export default function useAdminState() {
     });
   };
 
-  const sanitizePathForSupabase = (pathStr, defaultName = 'file.png') => {
-    if (!pathStr) return null;
-    if (pathStr.length <= 250 && !pathStr.startsWith('data:')) {
-      return pathStr;
-    }
-    const cleanName = (defaultName || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `uploads/${cleanName}`;
+  const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.75) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        fileToDataURL(file).then(resolve);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
   };
 
   const uploadImageToSupabase = async (file, folder = 'uploads') => {
     if (!file) return null;
-    const dataUrl = await fileToDataURL(file);
+    const dataUrl = await compressImage(file);
     try {
       const fileExt = (file.name.split('.').pop() || 'png').toLowerCase();
       const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
@@ -986,9 +1018,10 @@ export default function useAdminState() {
     } catch (err) {
       console.warn('Supabase storage upload exception:', err);
     }
-    // Fallback to base64 DataURL if storage bucket upload failed
+    // Return compressed DataURL so image works 100% on refresh and on public site
     return dataUrl;
   };
+
 
 
 
@@ -1044,7 +1077,6 @@ export default function useAdminState() {
     // Supabase Cloud DB fallback
     let supaSaved = false;
     try {
-      const brochureClean = uploadedBrochurePath ? sanitizePathForSupabase(uploadedBrochurePath, serviceBrochure?.name || 'brochure.pdf') : null;
       const payload = {
         title: serviceForm.title,
         slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -1053,9 +1085,10 @@ export default function useAdminState() {
         features: serviceForm.features || '',
         sort_order: Number(serviceForm.sort_order) || 0,
         status: serviceForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, serviceImage?.name || 'service.png') } : {}),
-        ...(brochureClean ? { pdf_brochure_path: brochureClean, brochure_path: brochureClean } : {})
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
+        ...(uploadedBrochurePath ? { pdf_brochure_path: uploadedBrochurePath, brochure_path: uploadedBrochurePath } : {})
       };
+
 
 
 
@@ -1067,13 +1100,19 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Service saved to Cloud Database!");
+        setEditingService(null);
+        setServiceImage(null);
+        setServiceBrochure(null);
+        fetchServices();
+        return;
       } else {
         console.warn("Supabase service save error:", supaRes.error);
       }
     } catch (err) {
       console.warn("Supabase service save exception:", err);
     }
+
 
     // Always update local React state & localStorage cache
     const newSvc = {
@@ -1210,7 +1249,6 @@ export default function useAdminState() {
     // Supabase Cloud DB fallback
     let supaSaved = false;
     try {
-      const brochureClean = uploadedBrochurePath ? sanitizePathForSupabase(uploadedBrochurePath, productBrochure?.name || 'brochure.pdf') : null;
       const payload = {
         category_id: validCatId,
         category_name: categoryName,
@@ -1220,9 +1258,10 @@ export default function useAdminState() {
         specifications: specsJson || '[]',
         video_url: productForm.video_url || '',
         is_featured: !!productForm.is_featured,
-        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, productImage?.name || 'product.png') } : {}),
-        ...(brochureClean ? { pdf_brochure_path: brochureClean, brochure_path: brochureClean } : {})
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
+        ...(uploadedBrochurePath ? { pdf_brochure_path: uploadedBrochurePath, brochure_path: uploadedBrochurePath } : {})
       };
+
 
       let supaRes;
       if (isNew) {
@@ -1234,13 +1273,19 @@ export default function useAdminState() {
 
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Product saved to Cloud Database!");
+        setEditingProduct(null);
+        setProductImage(null);
+        setProductBrochure(null);
+        fetchProducts();
+        return;
       } else {
         console.warn("Supabase product save error:", supaRes.error);
       }
     } catch (err) {
       console.warn("Supabase product save exception:", err);
     }
+
 
     // Always update local React state & localStorage cache with complete product data
     const newProd = {
@@ -1430,7 +1475,7 @@ export default function useAdminState() {
         detailed_description: industryForm.detailed_description || '',
         sort_order: Number(industryForm.sort_order) || 0,
         status: industryForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, industryImage?.name || 'industry.png') } : {})
+        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
       };
 
       let supaRes;
@@ -1441,11 +1486,16 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Industry saved to Cloud Database!");
+        setEditingIndustry(null);
+        setIndustryImage(null);
+        fetchIndustries();
+        return;
       }
     } catch (err) {
       console.warn("Supabase industry save error:", err);
     }
+
 
     const newInd = {
       id: isNew ? Date.now() : editingIndustry.id,
@@ -1539,9 +1589,8 @@ export default function useAdminState() {
         sort_order: Number(clientForm.sort_order) || 0,
         status: clientForm.status || 'Publish',
         category: clientForm.category || 'Client',
-        ...(uploadedLogoPath ? { logo_path: sanitizePathForSupabase(uploadedLogoPath, clientLogo?.name || 'client.png') } : {})
+        ...(uploadedLogoPath ? { logo_path: uploadedLogoPath } : {})
       };
-
 
       let supaRes;
       if (isNew) {
@@ -1551,11 +1600,16 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Client saved to Cloud Database!");
+        setEditingClient(null);
+        setClientLogo(null);
+        fetchClients();
+        return;
       }
     } catch (err) {
       console.warn("Supabase client save error:", err);
     }
+
 
     const newClient = {
       id: isNew ? Date.now() : editingClient.id,
@@ -1646,6 +1700,7 @@ export default function useAdminState() {
       });
       if (res.ok) {
         toast.success("Blog saved successfully");
+
         setEditingBlog(null);
         setBlogImage(null);
         fetchBlogs();
@@ -1667,8 +1722,9 @@ export default function useAdminState() {
         seo_title: blogForm.seo_title || '',
         meta_description: blogForm.meta_description || '',
         seo_keywords: blogForm.seo_keywords || '',
-        ...(uploadedImgPath ? { featured_image: sanitizePathForSupabase(uploadedImgPath, blogImage?.name || 'blog.png') } : {})
+        ...(uploadedImgPath ? { featured_image: uploadedImgPath } : {})
       };
+
 
 
       let supaRes;
@@ -1679,11 +1735,16 @@ export default function useAdminState() {
       }
 
       if (!supaRes.error) {
-        supaSaved = true;
+        toast.success("✅ Blog article saved to Cloud Database!");
+        setEditingBlog(null);
+        setBlogImage(null);
+        fetchBlogs();
+        return;
       }
     } catch (err) {
       console.warn("Supabase blog save error:", err);
     }
+
 
     const newBlog = {
       id: isNew ? Date.now() : editingBlog.id,
