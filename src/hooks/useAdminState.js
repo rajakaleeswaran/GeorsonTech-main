@@ -324,30 +324,125 @@ export default function useAdminState() {
 
   // Fetch products and their categories
   const fetchProducts = async () => {
-    await fetchWithFallback('/products', 'products', setProducts);
-    await fetchWithFallback('/products/categories', 'product_categories', setProductCategories);
+    let cats = productCategories;
+    await fetchWithFallback('/products/categories', 'product_categories', (data) => {
+      cats = data;
+      setProductCategories(data);
+    });
+    await fetchWithFallback('/products', 'products', (data) => {
+      const cached = getInitialCache('products', []);
+      const enriched = data.map(p => {
+        const local = cached.find(c => String(c.id) === String(p.id));
+        const cat = cats.find(c => String(c.id) === String(p.category_id) || c.name === p.category_id || c.slug === p.category_id);
+
+        const finalImg = (p.image_path && p.image_path.startsWith('http'))
+          ? p.image_path
+          : (local?.image_path || p.image_path);
+
+        const finalBrochure = (p.brochure_path && p.brochure_path.startsWith('http'))
+          ? p.brochure_path
+          : (local?.brochure_path || p.brochure_path);
+
+        return {
+          ...p,
+          category_name: p.category_name || (cat ? cat.name : (p.category_id ? String(p.category_id) : 'Uncategorized')),
+          image_path: finalImg,
+          brochure_path: finalBrochure
+        };
+      });
+      setProducts(enriched);
+    });
   };
 
   // Fetch blog articles and their categories
   const fetchBlogs = async () => {
-    await fetchWithFallback('/blogs', 'blogs', setBlogs);
-    await fetchWithFallback('/blogs/categories', 'blog_categories', setBlogCategories);
+    let cats = blogCategories;
+    await fetchWithFallback('/blogs/categories', 'blog_categories', (data) => {
+      cats = data;
+      setBlogCategories(data);
+    });
+    await fetchWithFallback('/blogs', 'blogs', (data) => {
+      const cached = getInitialCache('blogs', []);
+      const enriched = data.map(b => {
+        const local = cached.find(c => String(c.id) === String(b.id));
+        const cat = cats.find(c => String(c.id) === String(b.category_id) || c.name === b.category_id || c.slug === b.category_id);
+
+        const finalImg = (b.featured_image && b.featured_image.startsWith('http'))
+          ? b.featured_image
+          : (local?.featured_image || b.featured_image);
+
+        return {
+          ...b,
+          category_name: b.category_name || (cat ? cat.name : (b.category_id ? String(b.category_id) : 'General')),
+          featured_image: finalImg
+        };
+      });
+      setBlogs(enriched);
+    });
   };
 
   // Fetch services list
-  const fetchServices = () => fetchWithFallback('/services', 'services', setServices);
+  const fetchServices = () => fetchWithFallback('/services', 'services', (data) => {
+    const cached = getInitialCache('services', []);
+    const enriched = data.map(s => {
+      const local = cached.find(c => String(c.id) === String(s.id));
+      return {
+        ...s,
+        image_path: (s.image_path && s.image_path.startsWith('http')) ? s.image_path : (local?.image_path || s.image_path),
+        brochure_path: (s.brochure_path && s.brochure_path.startsWith('http')) ? s.brochure_path : (local?.brochure_path || s.brochure_path)
+      };
+    });
+    setServices(enriched);
+  });
 
   // Fetch industries list
-  const fetchIndustries = () => fetchWithFallback('/industries', 'industries', setIndustries);
+  const fetchIndustries = () => fetchWithFallback('/industries', 'industries', (data) => {
+    const cached = getInitialCache('industries', []);
+    const enriched = data.map(i => {
+      const local = cached.find(c => String(c.id) === String(i.id));
+      return {
+        ...i,
+        image_path: (i.image_path && i.image_path.startsWith('http')) ? i.image_path : (local?.image_path || i.image_path)
+      };
+    });
+    setIndustries(enriched);
+  });
 
   // Fetch clients & brand logos
-  const fetchClients = () => fetchWithFallback('/clients', 'clients', setClients);
+  const fetchClients = () => fetchWithFallback('/clients', 'clients', (data) => {
+    const cached = getInitialCache('clients', []);
+    const enriched = data.map(c => {
+      const local = cached.find(l => String(l.id) === String(c.id));
+      return {
+        ...c,
+        logo_path: (c.logo_path && c.logo_path.startsWith('http')) ? c.logo_path : (local?.logo_path || c.logo_path)
+      };
+    });
+    setClients(enriched);
+  });
 
   // Fetch solutions and solution categories
   const fetchSolutions = async () => {
-    await fetchWithFallback('/solutions', 'solutions', setSolutions);
-    await fetchWithFallback('/solutions/categories', 'solution_categories', setSolutionCategories);
+    let cats = solutionCategories;
+    await fetchWithFallback('/solutions/categories', 'solution_categories', (data) => {
+      cats = data;
+      setSolutionCategories(data);
+    });
+    await fetchWithFallback('/solutions', 'solutions', (data) => {
+      const cached = getInitialCache('solutions', []);
+      const enriched = data.map(s => {
+        const local = cached.find(c => String(c.id) === String(s.id));
+        const cat = cats.find(c => String(c.id) === String(s.category_id) || c.name === s.category_id || c.slug === s.category_id);
+        return {
+          ...s,
+          category_name: s.category_name || (cat ? cat.name : (s.category_id ? String(s.category_id) : '')),
+          image_path: (s.image_path && s.image_path.startsWith('http')) ? s.image_path : (local?.image_path || s.image_path)
+        };
+      });
+      setSolutions(enriched);
+    });
   };
+
 
   // Fetch media library assets (admin-protected)
   const fetchMedia = async () => {
@@ -705,7 +800,7 @@ export default function useAdminState() {
         service_descriptions: solutionForm.service_descriptions || '',
         sort_order: Number(solutionForm.sort_order) || 0,
         status: solutionForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
+        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, solutionImage?.name || 'solution.png') } : {})
       };
 
       let supaRes;
@@ -714,6 +809,7 @@ export default function useAdminState() {
       } else {
         supaRes = await supabase.from('solutions').update(payload).eq('id', editingSolution.id);
       }
+
 
       if (!supaRes.error) {
         supaSaved = true;
@@ -863,18 +959,28 @@ export default function useAdminState() {
     });
   };
 
+  const sanitizePathForSupabase = (pathStr, defaultName = 'file.png') => {
+    if (!pathStr) return null;
+    if (pathStr.length <= 250 && !pathStr.startsWith('data:')) {
+      return pathStr;
+    }
+    const cleanName = (defaultName || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `uploads/${cleanName}`;
+  };
+
   const uploadImageToSupabase = async (file, folder = 'uploads') => {
     if (!file) return null;
     const dataUrl = await fileToDataURL(file);
     try {
       const fileExt = (file.name.split('.').pop() || 'png').toLowerCase();
       const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const bucketName = folder === 'brochures' ? 'brochures' : (folder === 'resumes' ? 'resumes' : 'uploads');
       const { data, error } = await supabase.storage
-        .from('images')
+        .from(bucketName)
         .upload(fileName, file, { cacheControl: '3600', upsert: true });
 
       if (!error && data) {
-        const { data: publicData } = supabase.storage.from('images').getPublicUrl(fileName);
+        const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
         if (publicData?.publicUrl) return publicData.publicUrl;
       }
     } catch (err) {
@@ -883,6 +989,8 @@ export default function useAdminState() {
     // Fallback to base64 DataURL if storage bucket upload failed
     return dataUrl;
   };
+
+
 
 
   // Services CRUD handlers
@@ -936,6 +1044,7 @@ export default function useAdminState() {
     // Supabase Cloud DB fallback
     let supaSaved = false;
     try {
+      const brochureClean = uploadedBrochurePath ? sanitizePathForSupabase(uploadedBrochurePath, serviceBrochure?.name || 'brochure.pdf') : null;
       const payload = {
         title: serviceForm.title,
         slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -944,9 +1053,11 @@ export default function useAdminState() {
         features: serviceForm.features || '',
         sort_order: Number(serviceForm.sort_order) || 0,
         status: serviceForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
-        ...(uploadedBrochurePath ? { brochure_path: uploadedBrochurePath } : {})
+        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, serviceImage?.name || 'service.png') } : {}),
+        ...(brochureClean ? { pdf_brochure_path: brochureClean, brochure_path: brochureClean } : {})
       };
+
+
 
       let supaRes;
       if (isNew) {
@@ -1099,6 +1210,7 @@ export default function useAdminState() {
     // Supabase Cloud DB fallback
     let supaSaved = false;
     try {
+      const brochureClean = uploadedBrochurePath ? sanitizePathForSupabase(uploadedBrochurePath, productBrochure?.name || 'brochure.pdf') : null;
       const payload = {
         category_id: validCatId,
         category_name: categoryName,
@@ -1108,8 +1220,8 @@ export default function useAdminState() {
         specifications: specsJson || '[]',
         video_url: productForm.video_url || '',
         is_featured: !!productForm.is_featured,
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
-        ...(uploadedBrochurePath ? { brochure_path: uploadedBrochurePath } : {})
+        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, productImage?.name || 'product.png') } : {}),
+        ...(brochureClean ? { pdf_brochure_path: brochureClean, brochure_path: brochureClean } : {})
       };
 
       let supaRes;
@@ -1118,6 +1230,8 @@ export default function useAdminState() {
       } else {
         supaRes = await supabase.from('products').update(payload).eq('id', editingProduct.id);
       }
+
+
 
       if (!supaRes.error) {
         supaSaved = true;
@@ -1316,7 +1430,7 @@ export default function useAdminState() {
         detailed_description: industryForm.detailed_description || '',
         sort_order: Number(industryForm.sort_order) || 0,
         status: industryForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
+        ...(uploadedImgPath ? { image_path: sanitizePathForSupabase(uploadedImgPath, industryImage?.name || 'industry.png') } : {})
       };
 
       let supaRes;
@@ -1425,8 +1539,9 @@ export default function useAdminState() {
         sort_order: Number(clientForm.sort_order) || 0,
         status: clientForm.status || 'Publish',
         category: clientForm.category || 'Client',
-        ...(uploadedLogoPath ? { logo_path: uploadedLogoPath } : {})
+        ...(uploadedLogoPath ? { logo_path: sanitizePathForSupabase(uploadedLogoPath, clientLogo?.name || 'client.png') } : {})
       };
+
 
       let supaRes;
       if (isNew) {
@@ -1552,8 +1667,9 @@ export default function useAdminState() {
         seo_title: blogForm.seo_title || '',
         meta_description: blogForm.meta_description || '',
         seo_keywords: blogForm.seo_keywords || '',
-        ...(uploadedImgPath ? { featured_image: uploadedImgPath } : {})
+        ...(uploadedImgPath ? { featured_image: sanitizePathForSupabase(uploadedImgPath, blogImage?.name || 'blog.png') } : {})
       };
+
 
       let supaRes;
       if (isNew) {
