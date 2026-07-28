@@ -398,7 +398,7 @@ export default function useAdminState() {
     }
   };
 
-  // Fetch collections when authenticated
+  // Fetch all collections once after authentication
   useEffect(() => {
     if (isAuthenticated) {
       fetchDashboardMetrics();
@@ -413,7 +413,7 @@ export default function useAdminState() {
       fetchVisitorStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, activeTab]);
+  }, [isAuthenticated]);
 
   // ─── AUTHENTICATION HANDLERS ──────────────────────────────────────────────
 
@@ -1089,7 +1089,11 @@ export default function useAdminState() {
 
     // Offline fallback
     if (isNew) {
-      const newProd = { id: Date.now(), ...productForm, category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || '' };
+      const newProd = {
+        id: Date.now(),
+        ...productForm,
+        category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || ''
+      };
       setProducts(prev => {
         const updated = [...prev, newProd];
         try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
@@ -1097,7 +1101,11 @@ export default function useAdminState() {
       });
     } else {
       setProducts(prev => {
-        const updated = prev.map(p => p.id === editingProduct.id ? { ...p, ...productForm } : p);
+        const updated = prev.map(p => p.id === editingProduct.id ? {
+          ...p,
+          ...productForm,
+          category_name: productCategories.find(c => String(c.id) === String(productForm.category_id))?.name || p.category_name || ''
+        } : p);
         try { localStorage.setItem('cms_cache_products', JSON.stringify(updated)); } catch (_) {}
         return updated;
       });
@@ -1107,6 +1115,7 @@ export default function useAdminState() {
     setProductImage(null);
     setProductBrochure(null);
   };
+
 
   const deleteProductItem = async (id) => {
     if (window.confirm("Delete this product?")) {

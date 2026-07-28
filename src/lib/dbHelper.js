@@ -315,14 +315,12 @@ export async function submitCareerApplication(careerForm, resumeFile) {
   // 2. Send to Express backend API backup if Supabase storage upload failed
   if (resumeFile && !resumePath) {
     try {
-      const fileExt = (resumeFile.name.split('.').pop() || 'pdf').toLowerCase();
-      const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const fileName = `resume_${Date.now()}_${safeName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, resumeFile, { cacheControl: '3600', upsert: false });
-
+      const fd = new FormData();
+      fd.append('resume', resumeFile);
+      const res = await fetch(`${API_BASE}/careers/upload`, {
+        method: 'POST',
+        body: fd
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.resumePath) {
@@ -351,7 +349,7 @@ export async function submitCareerApplication(careerForm, resumeFile) {
       phone: careerForm.phone,
       qualification: careerForm.qualification,
       experience: careerForm.experience,
-      resume_path: storedPath,
+      resume_path: resumePath,
       cover_letter: careerForm.coverLetter,
       status: 'Pending'
     }]);

@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
 function ServicesTab({
   services,
@@ -21,6 +21,8 @@ function ServicesTab({
           <button className="btn-primary" onClick={() => {
             setEditingService('new');
             setServiceForm({ title: '', slug: '', short_description: '', detailed_description: '', features: '', sort_order: 0, status: 'Publish' });
+            setServiceImage(null);
+            setServiceBrochure(null);
           }}>
             <FaPlus /> Add Service
           </button>
@@ -72,19 +74,58 @@ function ServicesTab({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {/* Thumbnail Image */}
             <div className="form-group">
               <label>Featured Thumbnail Image File</label>
-              <input type="file" className="form-input" onChange={e => setServiceImage(e.target.files[0])} accept="image/*" />
+              {/* Show current image preview when editing */}
+              {editingService !== 'new' && serviceForm.image_path && (
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img
+                    src={getAssetUrl(serviceForm.image_path)}
+                    alt="Current"
+                    style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e2e8f0' }}
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    <FaImage style={{ marginRight: '4px', color: '#0093DD' }} />
+                    Current image (select a new file to replace)
+                  </span>
+                </div>
+              )}
+              <input type="file" className="form-input" onChange={e => setServiceImage(e.target.files[0] || null)} accept="image/*" />
             </div>
+
+            {/* Brochure PDF */}
             <div className="form-group">
               <label>PDF Brochure Document</label>
-              <input type="file" className="form-input" onChange={e => setServiceBrochure(e.target.files[0])} accept=".pdf" />
+              {/* Show current brochure info when editing */}
+              {editingService !== 'new' && serviceForm.brochure_path && (
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '18px', color: '#ef4444', flexShrink: 0 }}>📄</span>
+                  <div>
+                    <a
+                      href={getAssetUrl(serviceForm.brochure_path, 'brochure')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '12px', color: '#ef4444', textDecoration: 'underline', display: 'block' }}
+                    >
+                      {serviceForm.brochure_path.split('/').pop()}
+                    </a>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Select a new file to replace</span>
+                  </div>
+                </div>
+              )}
+              <input type="file" className="form-input" onChange={e => setServiceBrochure(e.target.files[0] || null)} accept=".pdf" />
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button type="submit" className="btn-primary">Save Service</button>
-            <button type="button" className="btn-outline" onClick={() => setEditingService(null)}>Cancel</button>
+            <button type="button" className="btn-outline" onClick={() => {
+              setEditingService(null);
+              setServiceImage(null);
+              setServiceBrochure(null);
+            }}>Cancel</button>
           </div>
         </form>
       ) : (
@@ -96,6 +137,7 @@ function ServicesTab({
                 <th>Service Title</th>
                 <th>Status</th>
                 <th>Order</th>
+                <th>Brochure</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -103,13 +145,37 @@ function ServicesTab({
               {services.map(svc => (
                 <tr key={svc.id}>
                   <td>
-                    <img src={svc.image_path ? getAssetUrl(svc.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img
+                      src={svc.image_path ? getAssetUrl(svc.image_path) : ''}
+                      alt=""
+                      style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                      onError={e => { e.target.style.opacity = '0'; }}
+                    />
                   </td>
                   <td>{svc.title}</td>
                   <td><span className={`badge ${svc.status === 'Publish' ? 'publish' : 'draft'}`}>{svc.status}</span></td>
                   <td>{svc.sort_order}</td>
                   <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingService(svc); setServiceForm(svc); }}>
+                    {svc.brochure_path ? (
+                      <a
+                        href={getAssetUrl(svc.brochure_path, 'brochure')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#ef4444', fontSize: '13px' }}
+                      >
+                        📄 PDF
+                      </a>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                    )}
+                  </td>
+                  <td>
+                    <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                      setEditingService(svc);
+                      setServiceForm(svc);
+                      setServiceImage(null);
+                      setServiceBrochure(null);
+                    }}>
                       <FaEdit /> Edit
                     </button>
                     <button className="admin-action-btn admin-btn-delete" onClick={() => deleteServiceItem(svc.id)}>

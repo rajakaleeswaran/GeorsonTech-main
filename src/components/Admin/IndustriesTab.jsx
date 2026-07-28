@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
 function IndustriesTab({
   industries,
@@ -15,11 +15,12 @@ function IndustriesTab({
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>Industries serve</h2>
+        <h2 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>Industries Serve</h2>
         {!editingIndustry && (
           <button className="btn-primary" onClick={() => {
             setEditingIndustry('new');
             setIndustryForm({ name: '', slug: '', description: '', detailed_description: '', sort_order: 0, status: 'Publish' });
+            setIndustryImage(null);
           }}>
             <FaPlus /> Add Industry
           </button>
@@ -58,13 +59,38 @@ function IndustriesTab({
               </select>
             </div>
           </div>
+
+          {/* Cover Photo with preview */}
           <div className="form-group">
             <label>Cover Photo Image</label>
-            <input type="file" className="form-input" onChange={e => setIndustryImage(e.target.files[0])} accept="image/*" />
+            {editingIndustry !== 'new' && industryForm.image_path && (
+              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img
+                  src={getAssetUrl(industryForm.image_path)}
+                  alt="Current"
+                  style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e2e8f0' }}
+                  onError={e => { e.target.style.display = 'none'; }}
+                />
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  <FaImage style={{ marginRight: '4px', color: '#0093DD' }} />
+                  Current image (select a new file to replace)
+                </span>
+              </div>
+            )}
+            <input
+              type="file"
+              className="form-input"
+              onChange={e => setIndustryImage(e.target.files[0] || null)}
+              accept="image/*"
+            />
           </div>
+
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button type="submit" className="btn-primary">Save Industry</button>
-            <button type="button" className="btn-outline" onClick={() => setEditingIndustry(null)}>Cancel</button>
+            <button type="button" className="btn-outline" onClick={() => {
+              setEditingIndustry(null);
+              setIndustryImage(null);
+            }}>Cancel</button>
           </div>
         </form>
       ) : (
@@ -83,13 +109,22 @@ function IndustriesTab({
               {industries.map(ind => (
                 <tr key={ind.id}>
                   <td>
-                    <img src={ind.image_path ? getAssetUrl(ind.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img
+                      src={ind.image_path ? getAssetUrl(ind.image_path) : ''}
+                      alt=""
+                      style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                      onError={e => { e.target.style.opacity = '0'; }}
+                    />
                   </td>
                   <td>{ind.name}</td>
                   <td><span className={`badge ${ind.status === 'Publish' ? 'publish' : 'draft'}`}>{ind.status}</span></td>
                   <td>{ind.sort_order}</td>
                   <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingIndustry(ind); setIndustryForm(ind); }}>
+                    <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                      setEditingIndustry(ind);
+                      setIndustryForm(ind);
+                      setIndustryImage(null);
+                    }}>
                       <FaEdit /> Edit
                     </button>
                     <button className="admin-action-btn admin-btn-delete" onClick={() => deleteIndustryItem(ind.id)}>

@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
 function BlogsTab({
   blogs,
@@ -17,6 +17,7 @@ function BlogsTab({
 
   const handleTitleChange = (val) => {
     setBlogForm(prev => {
+      // Only auto-generate slug if slug is still empty
       const newSlug = !prev.slug ? val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : prev.slug;
       return { ...prev, title: val, slug: newSlug };
     });
@@ -29,7 +30,14 @@ function BlogsTab({
         {!editingBlog && (
           <button className="btn-primary" onClick={() => {
             setEditingBlog('new');
-            setBlogForm({ category_id: blogCategories[0]?.id || 1, category_name: blogCategories[0]?.name || 'Automation', title: '', slug: '', excerpt: '', content: '', status: 'Publish', seo_title: '', meta_description: '', seo_keywords: '' });
+            setCustomCat(false);
+            setBlogForm({
+              category_id: String(blogCategories[0]?.id || ''),
+              category_name: blogCategories[0]?.name || '',
+              title: '', slug: '', excerpt: '', content: '',
+              status: 'Publish', seo_title: '', meta_description: '', seo_keywords: ''
+            });
+            setBlogImage(null);
           }}>
             <FaPlus /> Create Blog Article
           </button>
@@ -44,41 +52,41 @@ function BlogsTab({
             <label>Article Category</label>
             {!customCat ? (
               <div style={{ display: 'flex', gap: '10px' }}>
-                <select 
-                  className="form-select" 
-                  required 
-                  value={blogForm.category_id || blogForm.category_name} 
+                <select
+                  className="form-select"
+                  required
+                  value={String(blogForm.category_id || '')}
                   onChange={e => {
                     const selectedVal = e.target.value;
                     if (selectedVal === 'ADD_NEW') {
                       setCustomCat(true);
                       setBlogForm(prev => ({ ...prev, category_id: '', category_name: '' }));
                     } else {
-                      const matched = blogCategories.find(c => String(c.id) === String(selectedVal) || c.name === selectedVal);
-                      setBlogForm(prev => ({ 
-                        ...prev, 
-                        category_id: matched ? matched.id : selectedVal,
-                        category_name: matched ? matched.name : selectedVal 
+                      const matched = blogCategories.find(c => String(c.id) === String(selectedVal));
+                      setBlogForm(prev => ({
+                        ...prev,
+                        category_id: selectedVal,
+                        category_name: matched ? matched.name : selectedVal
                       }));
                     }
                   }}
                 >
                   <option value="">-- Choose Category --</option>
                   {blogCategories.map(cat => (
-                    <option key={cat.id || cat.name} value={cat.id || cat.name}>{cat.name}</option>
+                    <option key={cat.id || cat.name} value={String(cat.id || cat.name)}>{cat.name}</option>
                   ))}
                   <option value="ADD_NEW">+ Add Custom Category...</option>
                 </select>
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="Enter new category name..." 
-                  required 
-                  value={blogForm.category_name || ''} 
-                  onChange={e => setBlogForm(prev => ({ ...prev, category_name: e.target.value, category_id: e.target.value }))} 
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter new category name..."
+                  required
+                  value={blogForm.category_name || ''}
+                  onChange={e => setBlogForm(prev => ({ ...prev, category_name: e.target.value, category_id: e.target.value }))}
                 />
                 <button type="button" className="btn-outline" onClick={() => setCustomCat(false)}>Select Existing</button>
               </div>
@@ -89,7 +97,6 @@ function BlogsTab({
             <label>Article Title</label>
             <input type="text" className="form-input" required value={blogForm.title} onChange={e => handleTitleChange(e.target.value)} />
           </div>
-
 
           <div className="form-group">
             <label>Slug (Unique URL)</label>
@@ -107,10 +114,26 @@ function BlogsTab({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {/* Featured Image */}
             <div className="form-group">
               <label>Featured Image</label>
-              <input type="file" className="form-input" onChange={e => setBlogImage(e.target.files[0])} accept="image/*" />
+              {editingBlog !== 'new' && blogForm.featured_image && (
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img
+                    src={getAssetUrl(blogForm.featured_image)}
+                    alt="Current"
+                    style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e2e8f0' }}
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    <FaImage style={{ marginRight: '4px', color: '#0093DD' }} />
+                    Current image (select to replace)
+                  </span>
+                </div>
+              )}
+              <input type="file" className="form-input" onChange={e => setBlogImage(e.target.files[0] || null)} accept="image/*" />
             </div>
+
             <div className="form-group">
               <label>Publication Status</label>
               <select className="form-select" value={blogForm.status} onChange={e => setBlogForm(prev => ({ ...prev, status: e.target.value }))}>
@@ -136,7 +159,11 @@ function BlogsTab({
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button type="submit" className="btn-primary">Save Article</button>
-            <button type="button" className="btn-outline" onClick={() => setEditingBlog(null)}>Cancel</button>
+            <button type="button" className="btn-outline" onClick={() => {
+              setEditingBlog(null);
+              setBlogImage(null);
+              setCustomCat(false);
+            }}>Cancel</button>
           </div>
         </form>
       ) : (
@@ -155,13 +182,24 @@ function BlogsTab({
               {blogs.map(blog => (
                 <tr key={blog.id}>
                   <td>
-                    <img src={blog.featured_image ? getAssetUrl(blog.featured_image) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img
+                      src={blog.featured_image ? getAssetUrl(blog.featured_image) : ''}
+                      alt=""
+                      style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                      onError={e => { e.target.style.opacity = '0'; }}
+                    />
                   </td>
                   <td>{blog.title}</td>
                   <td>{blog.category_name}</td>
                   <td><span className={`badge ${blog.status === 'Publish' ? 'publish' : 'draft'}`}>{blog.status}</span></td>
                   <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingBlog(blog); setBlogForm(blog); }}>
+                    <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                      setEditingBlog(blog);
+                      // Coerce category_id to String to match select option values
+                      setBlogForm({ ...blog, category_id: String(blog.category_id || '') });
+                      setBlogImage(null);
+                      setCustomCat(false);
+                    }}>
                       <FaEdit /> Edit
                     </button>
                     <button className="admin-action-btn admin-btn-delete" onClick={() => deleteBlogItem(blog.id)}>

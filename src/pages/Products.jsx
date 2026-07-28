@@ -161,9 +161,9 @@ function Products() {
                         >
                           <FaInfoCircle /> Details
                         </button>
-                         {product.pdf_brochure_path && (
+                         {product.brochure_path && (
                           <a 
-                            href={getAssetUrl(product.pdf_brochure_path)} 
+                            href={getAssetUrl(product.brochure_path, 'brochure')} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="product-btn-pdf" 
@@ -256,20 +256,34 @@ function Products() {
               </p>
 
               {/* Technical Specifications */}
-              {selectedProduct.specifications && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
-                    Technical Specifications:
-                  </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {(typeof selectedProduct.specifications === 'string' ? selectedProduct.specifications.split(',') : selectedProduct.specifications).map((spec, i) => (
-                      <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px' }}>
-                        {spec.trim()}
-                      </span>
-                    ))}
+              {selectedProduct.specifications && (() => {
+                // Parse specs: could be JSON array string or comma-separated
+                let specItems = [];
+                if (typeof selectedProduct.specifications === 'string') {
+                  try {
+                    const parsed = JSON.parse(selectedProduct.specifications);
+                    specItems = Array.isArray(parsed) ? parsed : [selectedProduct.specifications];
+                  } catch {
+                    specItems = selectedProduct.specifications.split(',').map(s => s.trim()).filter(Boolean);
+                  }
+                } else if (Array.isArray(selectedProduct.specifications)) {
+                  specItems = selectedProduct.specifications;
+                }
+                return specItems.length > 0 ? (
+                  <div style={{ marginBottom: '24px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
+                      Technical Specifications:
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {specItems.map((spec, i) => (
+                        <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px' }}>
+                          {typeof spec === 'string' ? spec.trim() : spec}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : null;
+              })()}
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '15px' }}>
@@ -281,9 +295,9 @@ function Products() {
                 >
                   <FaEnvelope /> Request Callback
                 </Link>
-                 {selectedProduct.pdf_brochure_path && (
+                 {selectedProduct.brochure_path && (
                   <a 
-                    href={getAssetUrl(selectedProduct.pdf_brochure_path)} 
+                    href={getAssetUrl(selectedProduct.brochure_path, 'brochure')} 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="btn-outline"

@@ -1,35 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaArrowRight } from 'react-icons/fa';
 import '../../styles/Home.css';
+import { fetchCollection, getAssetUrl } from '../../lib/dbHelper';
 
-// Use existing product images if available
+// Fallback static images for when no DB product image is available
 import prod1 from '../../assets/Home/Hero/hero1.png';
 import prod2 from '../../assets/Home/Hero/hero2.png';
 import prod3 from '../../assets/Home/Hero/hero3.png';
 
-const PRODUCTS = [
+const FALLBACK_IMAGES = [prod1, prod2, prod3];
+
+const STATIC_FALLBACK = [
   {
-    image: prod1,
-    category: "Electrical Panels",
+    id: 'f1',
+    image_path: null,
+    category_name: "Electrical Panels",
     name: "MCC / PCC Control Panels",
     description: "Motor control centres and power control centres for industrial plants.",
   },
   {
-    image: prod2,
-    category: "Automation",
+    id: 'f2',
+    image_path: null,
+    category_name: "Automation",
     name: "PLC & SCADA Systems",
     description: "Programmable logic controllers and SCADA integration for process control.",
   },
   {
-    image: prod3,
-    category: "IoT",
+    id: 'f3',
+    image_path: null,
+    category_name: "IoT",
     name: "Smart Sensors & Gateways",
     description: "Industrial IoT edge devices for real-time data acquisition and monitoring.",
   },
 ];
 
 function ProductsPreview() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCollection('/products', 'products')
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Prefer featured products first, then take up to 3
+          const sorted = [...data].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+          setProducts(sorted.slice(0, 3));
+        } else {
+          setProducts(STATIC_FALLBACK);
+        }
+      })
+      .catch(() => setProducts(STATIC_FALLBACK))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // While loading, show static fallback immediately (no blank flash)
+  const displayProducts = products.length > 0 ? products : STATIC_FALLBACK;
+
   return (
     <section className="products-section">
       <div className="section-header">
@@ -42,18 +69,31 @@ function ProductsPreview() {
       </div>
 
       <div className="products-grid-preview">
-        {PRODUCTS.map((prod, i) => (
-          <Link key={i} to="/products" className="product-preview-card">
-            <div className="product-preview-img">
-              <img src={prod.image} alt={prod.name} loading="lazy" />
-            </div>
-            <div className="product-preview-body">
-              <p className="product-preview-category">{prod.category}</p>
-              <h3>{prod.name}</h3>
-              <p>{prod.description}</p>
-            </div>
-          </Link>
-        ))}
+        {displayProducts.map((prod, i) => {
+          const imgSrc = prod.image_path
+            ? getAssetUrl(prod.image_path)
+            : FALLBACK_IMAGES[i % FALLBACK_IMAGES.length];
+
+          return (
+            <Link key={prod.id || i} to="/products" className="product-preview-card">
+              <div className="product-preview-img">
+                <img
+                  src={imgSrc}
+                  alt={prod.name}
+                  loading="lazy"
+                  onError={e => {
+                    e.target.src = FALLBACK_IMAGES[i % FALLBACK_IMAGES.length];
+                  }}
+                />
+              </div>
+              <div className="product-preview-body">
+                <p className="product-preview-category">{prod.category_name || 'General'}</p>
+                <h3>{prod.name}</h3>
+                <p>{prod.description}</p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       <div className="section-cta-center">

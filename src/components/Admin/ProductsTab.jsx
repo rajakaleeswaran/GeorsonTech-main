@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage, FaFilePdf } from 'react-icons/fa';
 
 function ProductsTab({
   activeTab,
@@ -30,6 +30,8 @@ function ProductsTab({
             <button className="btn-primary" onClick={() => {
               setEditingProduct('new');
               setProductForm({ category_id: '', name: '', slug: '', description: '', specifications: '', video_url: '', is_featured: false });
+              setProductImage(null);
+              setProductBrochure(null);
             }}>
               <FaPlus /> Add Product
             </button>
@@ -42,10 +44,16 @@ function ProductsTab({
             
             <div className="form-group">
               <label>Category</label>
-              <select className="form-select" required value={productForm.category_id} onChange={e => setProductForm(prev => ({ ...prev, category_id: e.target.value }))}>
+              {/* Coerce both value and option values to String to avoid type mismatch */}
+              <select
+                className="form-select"
+                required
+                value={String(productForm.category_id || '')}
+                onChange={e => setProductForm(prev => ({ ...prev, category_id: e.target.value }))}
+              >
                 <option value="">-- Select Category --</option>
                 {productCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
                 ))}
               </select>
             </div>
@@ -76,24 +84,73 @@ function ProductsTab({
             </div>
 
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="checkbox" checked={productForm.is_featured} onChange={e => setProductForm(prev => ({ ...prev, is_featured: e.target.checked }))} />
+              <input type="checkbox" checked={!!productForm.is_featured} onChange={e => setProductForm(prev => ({ ...prev, is_featured: e.target.checked }))} />
               <label style={{ margin: 0 }}>Featured Product (Highlight on Landing page)</label>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* Product Image */}
               <div className="form-group">
                 <label>Product Image</label>
-                <input type="file" className="form-input" onChange={e => setProductImage(e.target.files[0])} accept="image/*" />
+                {/* Show existing image preview when editing */}
+                {editingProduct !== 'new' && productForm.image_path && (
+                  <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img
+                      src={getAssetUrl(productForm.image_path)}
+                      alt="Current"
+                      style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e2e8f0' }}
+                      onError={e => { e.target.style.display = 'none'; }}
+                    />
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      <FaImage style={{ marginRight: '4px', color: '#0093DD' }} />
+                      Current image (select a new file to replace)
+                    </span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  className="form-input"
+                  onChange={e => setProductImage(e.target.files[0] || null)}
+                  accept="image/*"
+                />
               </div>
+
+              {/* Brochure PDF */}
               <div className="form-group">
                 <label>Brochure PDF</label>
-                <input type="file" className="form-input" onChange={e => setProductBrochure(e.target.files[0])} accept=".pdf" />
+                {/* Show existing brochure info when editing */}
+                {editingProduct !== 'new' && productForm.brochure_path && (
+                  <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FaFilePdf style={{ color: '#ef4444', fontSize: '24px', flexShrink: 0 }} />
+                    <div>
+                      <a
+                        href={getAssetUrl(productForm.brochure_path, 'brochure')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '12px', color: '#ef4444', textDecoration: 'underline', display: 'block' }}
+                      >
+                        {productForm.brochure_path.split('/').pop()}
+                      </a>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>Select a new file to replace</span>
+                    </div>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  className="form-input"
+                  onChange={e => setProductBrochure(e.target.files[0] || null)}
+                  accept=".pdf"
+                />
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button type="submit" className="btn-primary">Save Product</button>
-              <button type="button" className="btn-outline" onClick={() => setEditingProduct(null)}>Cancel</button>
+              <button type="button" className="btn-outline" onClick={() => {
+                setEditingProduct(null);
+                setProductImage(null);
+                setProductBrochure(null);
+              }}>Cancel</button>
             </div>
           </form>
         ) : (
@@ -105,6 +162,7 @@ function ProductsTab({
                   <th>Product Name</th>
                   <th>Category</th>
                   <th>Featured</th>
+                  <th>Brochure</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -112,11 +170,30 @@ function ProductsTab({
                 {products.map(p => (
                   <tr key={p.id}>
                     <td>
-                      <img src={p.image_path ? getAssetUrl(p.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <img
+                        src={p.image_path ? getAssetUrl(p.image_path) : ''}
+                        alt=""
+                        style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                        onError={e => { e.target.src = ''; e.target.style.opacity = '0'; }}
+                      />
                     </td>
                     <td>{p.name}</td>
-                    <td>{p.category_name}</td>
-                    <td>{p.is_featured ? <span style={{ color: 'green', fontWeight: 'bold' }}>Yes</span> : 'No'}</td>
+                    <td>{p.category_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Uncategorized</span>}</td>
+                    <td>{p.is_featured ? <span style={{ color: 'green', fontWeight: 'bold' }}>✓ Yes</span> : 'No'}</td>
+                    <td>
+                      {p.brochure_path ? (
+                        <a
+                          href={getAssetUrl(p.brochure_path, 'brochure')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <FaFilePdf /> PDF
+                        </a>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                      )}
+                    </td>
                     <td>
                       <button className="admin-action-btn admin-btn-edit" onClick={() => {
                         let formSpecs = '';
@@ -133,7 +210,11 @@ function ProductsTab({
                           }
                         }
                         setEditingProduct(p);
-                        setProductForm({ ...p, specifications: formSpecs });
+                        // Spread all product fields into form; coerce category_id to string
+                        setProductForm({ ...p, specifications: formSpecs, category_id: String(p.category_id || '') });
+                        // Reset file inputs so no stale file is carried over
+                        setProductImage(null);
+                        setProductBrochure(null);
                       }}>
                         <FaEdit /> Edit
                       </button>

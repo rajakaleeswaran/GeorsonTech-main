@@ -35,12 +35,16 @@ function Blog() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter logic
+  // Filter logic — only show Published blogs
   const filteredBlogs = blogs.filter(blog => {
+    if (blog.status && blog.status !== 'Publish') return false;
     const matchCat = !activeCategory || blog.category_name === activeCategory;
-    const matchSearch = blog.title.toLowerCase().includes(search.toLowerCase()) ||
-                        (blog.excerpt && blog.excerpt.toLowerCase().includes(search.toLowerCase())) ||
-                        (blog.content && blog.content.toLowerCase().includes(search.toLowerCase()));
+    const titleLower = (blog.title || '').toLowerCase();
+    const excerptLower = (blog.excerpt || '').toLowerCase();
+    const contentLower = (blog.content || '').toLowerCase();
+    const matchSearch = titleLower.includes(search.toLowerCase()) ||
+                        excerptLower.includes(search.toLowerCase()) ||
+                        contentLower.includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
@@ -211,9 +215,9 @@ function Blog() {
                     All Categories
                   </button>
                 </li>
-                {categories.map((cat, i) => (
+              {categories.map((cat, i) => (
                   <li key={cat.id || i}>
-                    <button 
+                    <button
                       onClick={() => setActiveCategory(cat.name)}
                       style={{
                         width: '100%',
@@ -227,12 +231,13 @@ function Blog() {
                         cursor: 'pointer',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        border: 'none',
                       }}
                     >
                       {cat.name}
                       <span style={{ fontSize: '11px', background: '#e2e8f0', padding: '2px 6px', borderRadius: '10px', color: '#475569' }}>
-                        {cat.count}
+                        {blogs.filter(b => b.category_name === cat.name && (!b.status || b.status === 'Publish')).length}
                       </span>
                     </button>
                   </li>

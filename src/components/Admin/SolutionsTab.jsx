@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
 function SolutionsTab({
   activeTab,
@@ -31,6 +31,7 @@ function SolutionsTab({
             <button className="btn-primary" onClick={() => {
               setEditingSolution('new');
               setSolutionForm({ category_id: '', name: '', slug: '', description: '', icon: '', service_descriptions: '', sort_order: 0, status: 'Publish', industry_ids: [], product_ids: [] });
+              setSolutionImage(null);
             }}>
               <FaPlus /> Add Solution
             </button>
@@ -43,10 +44,16 @@ function SolutionsTab({
             
             <div className="form-group">
               <label>Category</label>
-              <select className="form-select" required value={solutionForm.category_id} onChange={e => setSolutionForm(prev => ({ ...prev, category_id: e.target.value }))}>
+              {/* Coerce to String for proper HTML select matching */}
+              <select
+                className="form-select"
+                required
+                value={String(solutionForm.category_id || '')}
+                onChange={e => setSolutionForm(prev => ({ ...prev, category_id: e.target.value }))}
+              >
                 <option value="">-- Choose Category --</option>
                 {solutionCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
                 ))}
               </select>
             </div>
@@ -95,16 +102,17 @@ function SolutionsTab({
               <label style={{ fontWeight: 'bold', marginBottom: '10px' }}>Assign to Industry Sectors:</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
                 {industries.map(ind => {
-                  const isChecked = solutionForm.industry_ids?.includes(ind.id);
+                  const currentIds = Array.isArray(solutionForm.industry_ids) ? solutionForm.industry_ids : [];
+                  const isChecked = currentIds.some(id => String(id) === String(ind.id));
                   return (
-                    <label key={ind.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500', fontSize: '13px', margin: 0 }}>
+                    <label key={ind.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500', fontSize: '13px', margin: 0, cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={e => {
                           const nextIds = e.target.checked
-                            ? [...(solutionForm.industry_ids || []), ind.id]
-                            : (solutionForm.industry_ids || []).filter(id => id !== ind.id);
+                            ? [...currentIds, ind.id]
+                            : currentIds.filter(id => String(id) !== String(ind.id));
                           setSolutionForm(prev => ({ ...prev, industry_ids: nextIds }));
                         }}
                       />
@@ -112,6 +120,7 @@ function SolutionsTab({
                     </label>
                   );
                 })}
+                {industries.length === 0 && <span style={{ color: '#94a3b8', fontSize: '13px' }}>No industries found</span>}
               </div>
             </div>
 
@@ -120,16 +129,17 @@ function SolutionsTab({
               <label style={{ fontWeight: 'bold', marginBottom: '10px' }}>Link Related Products:</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
                 {products.map(prod => {
-                  const isChecked = solutionForm.product_ids?.includes(prod.id);
+                  const currentIds = Array.isArray(solutionForm.product_ids) ? solutionForm.product_ids : [];
+                  const isChecked = currentIds.some(id => String(id) === String(prod.id));
                   return (
-                    <label key={prod.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500', fontSize: '13px', margin: 0 }}>
+                    <label key={prod.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500', fontSize: '13px', margin: 0, cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={e => {
                           const nextIds = e.target.checked
-                            ? [...(solutionForm.product_ids || []), prod.id]
-                            : (solutionForm.product_ids || []).filter(id => id !== prod.id);
+                            ? [...currentIds, prod.id]
+                            : currentIds.filter(id => String(id) !== String(prod.id));
                           setSolutionForm(prev => ({ ...prev, product_ids: nextIds }));
                         }}
                       />
@@ -137,17 +147,41 @@ function SolutionsTab({
                     </label>
                   );
                 })}
+                {products.length === 0 && <span style={{ color: '#94a3b8', fontSize: '13px' }}>No products found</span>}
               </div>
             </div>
 
+            {/* Featured Image with preview */}
             <div className="form-group">
               <label>Featured Image Upload</label>
-              <input type="file" className="form-input" onChange={e => setSolutionImage(e.target.files[0])} accept="image/*" />
+              {editingSolution !== 'new' && solutionForm.image_path && (
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img
+                    src={getAssetUrl(solutionForm.image_path)}
+                    alt="Current"
+                    style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e2e8f0' }}
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    <FaImage style={{ marginRight: '4px', color: '#0093DD' }} />
+                    Current image (select to replace)
+                  </span>
+                </div>
+              )}
+              <input
+                type="file"
+                className="form-input"
+                onChange={e => setSolutionImage(e.target.files[0] || null)}
+                accept="image/*"
+              />
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button type="submit" className="btn-primary">Save Solution</button>
-              <button type="button" className="btn-outline" onClick={() => setEditingSolution(null)}>Cancel</button>
+              <button type="button" className="btn-outline" onClick={() => {
+                setEditingSolution(null);
+                setSolutionImage(null);
+              }}>Cancel</button>
             </div>
           </form>
         ) : (
@@ -163,24 +197,42 @@ function SolutionsTab({
                 </tr>
               </thead>
               <tbody>
-                {solutions.map(sol => (
-                  <tr key={sol.id}>
-                    <td>
-                      <img src={sol.image_path ? getAssetUrl(sol.image_path) : ''} alt="" style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
-                    </td>
-                    <td>{sol.name}</td>
-                    <td>{sol.category_name}</td>
-                    <td><span className={`badge ${sol.status === 'Publish' ? 'publish' : 'draft'}`}>{sol.status}</span></td>
-                    <td>
-                      <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingSolution(sol); setSolutionForm({ ...sol, industry_ids: sol.industry_ids || [], product_ids: sol.product_ids || [] }); }}>
-                        <FaEdit /> Edit
-                      </button>
-                      <button className="admin-action-btn admin-btn-delete" onClick={() => deleteSolutionItem(sol.id)}>
-                        <FaTrash /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {solutions.length === 0 ? (
+                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>No solutions yet. Add your first solution.</td></tr>
+                ) : (
+                  solutions.map(sol => (
+                    <tr key={sol.id}>
+                      <td>
+                        <img
+                          src={sol.image_path ? getAssetUrl(sol.image_path) : ''}
+                          alt=""
+                          style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                          onError={e => { e.target.style.opacity = '0'; }}
+                        />
+                      </td>
+                      <td>{sol.name}</td>
+                      <td>{sol.category_name || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                      <td><span className={`badge ${sol.status === 'Publish' ? 'publish' : 'draft'}`}>{sol.status}</span></td>
+                      <td>
+                        <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                          setEditingSolution(sol);
+                          setSolutionForm({
+                            ...sol,
+                            category_id: String(sol.category_id || ''),
+                            industry_ids: Array.isArray(sol.industry_ids) ? sol.industry_ids : [],
+                            product_ids: Array.isArray(sol.product_ids) ? sol.product_ids : []
+                          });
+                          setSolutionImage(null);
+                        }}>
+                          <FaEdit /> Edit
+                        </button>
+                        <button className="admin-action-btn admin-btn-delete" onClick={() => deleteSolutionItem(sol.id)}>
+                          <FaTrash /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -231,20 +283,24 @@ function SolutionsTab({
                 </tr>
               </thead>
               <tbody>
-                {solutionCategories.map(cat => (
-                  <tr key={cat.id}>
-                    <td>{cat.name}</td>
-                    <td>{cat.sort_order}</td>
-                    <td>
-                      <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingSolutionCategory(cat); setSolutionCategoryForm(cat); }}>
-                        <FaEdit /> Edit
-                      </button>
-                      <button className="admin-action-btn admin-btn-delete" onClick={() => deleteSolutionCategoryItem(cat.id)}>
-                        <FaTrash /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {solutionCategories.length === 0 ? (
+                  <tr><td colSpan="3" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>No solution categories yet.</td></tr>
+                ) : (
+                  solutionCategories.map(cat => (
+                    <tr key={cat.id}>
+                      <td>{cat.name}</td>
+                      <td>{cat.sort_order}</td>
+                      <td>
+                        <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingSolutionCategory(cat); setSolutionCategoryForm(cat); }}>
+                          <FaEdit /> Edit
+                        </button>
+                        <button className="admin-action-btn admin-btn-delete" onClick={() => deleteSolutionCategoryItem(cat.id)}>
+                          <FaTrash /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

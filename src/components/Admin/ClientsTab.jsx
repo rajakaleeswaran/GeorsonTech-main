@@ -1,6 +1,6 @@
 import { getAssetUrl } from '../../lib/api';
 import React, { useState } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaSort } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaSort, FaImage } from 'react-icons/fa';
 
 function ClientsTab({
   clients,
@@ -20,7 +20,7 @@ function ClientsTab({
   const filteredClients = clients
     .filter(c => {
       const matchCategory = filterCategory === 'All' || c.category === filterCategory;
-      const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = (c.name || '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchCategory && matchSearch;
     })
     .sort((a, b) => {
@@ -48,6 +48,7 @@ function ClientsTab({
           <button className="btn-primary" onClick={() => {
             setEditingClient('new');
             setClientForm({ name: '', sort_order: 0, status: 'Publish', category: 'Client' });
+            setClientLogo(null);
           }}>
             <FaPlus /> Add Logo
           </button>
@@ -57,10 +58,12 @@ function ClientsTab({
       {editingClient ? (
         <form onSubmit={saveClient} className="admin-form">
           <h3>{editingClient === 'new' ? 'New Logo' : 'Edit Logo'}</h3>
+
           <div className="form-group">
             <label>Company / Brand Name</label>
             <input type="text" className="form-input" required value={clientForm.name} onChange={e => setClientForm(prev => ({ ...prev, name: e.target.value }))} />
           </div>
+
           <div className="form-group">
             <label>Logo Type / Category</label>
             <select className="form-select" value={clientForm.category || 'Client'} onChange={e => setClientForm(prev => ({ ...prev, category: e.target.value }))}>
@@ -68,6 +71,7 @@ function ClientsTab({
               <option value="Brand">Global Brand (Deal with Global Brands slider)</option>
             </select>
           </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="form-group">
               <label>Display Order</label>
@@ -81,13 +85,42 @@ function ClientsTab({
               </select>
             </div>
           </div>
+
           <div className="form-group">
             <label>Upload Logo File (PNG/JPEG)</label>
-            <input type="file" className="form-input" onChange={e => setClientLogo(e.target.files[0])} accept="image/*" />
+            {/* Show current logo preview when editing */}
+            {editingClient !== 'new' && clientForm.logo_path && (
+              <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <img
+                  src={getAssetUrl(clientForm.logo_path)}
+                  alt={clientForm.name}
+                  style={{ height: '40px', maxWidth: '120px', objectFit: 'contain' }}
+                  onError={e => { e.target.style.display = 'none'; }}
+                />
+                <div>
+                  <span style={{ fontSize: '12px', color: '#0093DD', fontWeight: '600' }}>
+                    <FaImage style={{ marginRight: '4px' }} />
+                    Current logo
+                  </span>
+                  <br />
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>Select a new file to replace</span>
+                </div>
+              </div>
+            )}
+            <input
+              type="file"
+              className="form-input"
+              onChange={e => setClientLogo(e.target.files[0] || null)}
+              accept="image/*"
+            />
           </div>
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <button type="submit" className="btn-primary">Save Logo</button>
-            <button type="button" className="btn-outline" onClick={() => setEditingClient(null)}>Cancel</button>
+            <button type="button" className="btn-outline" onClick={() => {
+              setEditingClient(null);
+              setClientLogo(null);
+            }}>Cancel</button>
           </div>
         </form>
       ) : (
@@ -96,21 +129,21 @@ function ClientsTab({
           <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap', background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
               <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input 
-                type="text" 
-                placeholder="Search company/brand..." 
+              <input
+                type="text"
+                placeholder="Search company/brand..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="form-input" 
+                className="form-input"
                 style={{ paddingLeft: '36px', height: '40px', margin: 0, width: '100%', boxSizing: 'border-box' }}
               />
             </div>
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <label style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Category:</label>
-              <select 
-                className="form-select" 
-                value={filterCategory} 
+              <select
+                className="form-select"
+                value={filterCategory}
                 onChange={e => setFilterCategory(e.target.value)}
                 style={{ width: '180px', height: '40px', padding: '0 12px', margin: 0 }}
               >
@@ -122,9 +155,9 @@ function ClientsTab({
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <label style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Sort By:</label>
-              <select 
-                className="form-select" 
-                value={sortBy} 
+              <select
+                className="form-select"
+                value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
                 style={{ width: '130px', height: '40px', padding: '0 12px', margin: 0 }}
               >
@@ -133,9 +166,9 @@ function ClientsTab({
                 <option value="category">Category</option>
                 <option value="status">Status</option>
               </select>
-              <button 
-                type="button" 
-                className="btn-outline" 
+              <button
+                type="button"
+                className="btn-outline"
                 style={{ height: '40px', padding: '0 16px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
               >
@@ -156,40 +189,53 @@ function ClientsTab({
                   <th>Actions</th>
                 </tr>
               </thead>
-            <tbody>
-              {filteredClients.map(c => (
-                <tr key={c.id}>
-                  <td>
-                    <img src={c.logo_path ? getAssetUrl(c.logo_path) : ''} alt="" style={{ height: '36px', objectFit: 'contain', maxWidth: '80px' }} />
-                  </td>
-                  <td>{c.name}</td>
-                  <td>
-                    <span style={{ 
-                      fontSize: '11px', 
-                      fontWeight: '600', 
-                      background: c.category === 'Brand' ? '#f59e0b22' : '#10b98122', 
-                      color: c.category === 'Brand' ? '#d97706' : '#059669', 
-                      padding: '2px 8px', 
-                      borderRadius: '12px' 
-                    }}>
-                      {c.category === 'Brand' ? 'Global Brand' : 'Prestigious Client'}
-                    </span>
-                  </td>
-                  <td><span className={`badge ${c.status === 'Publish' ? 'publish' : 'draft'}`}>{c.status}</span></td>
-                  <td>{c.sort_order}</td>
-                  <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => { setEditingClient(c); setClientForm(c); }}>
-                      <FaEdit /> Edit
-                    </button>
-                    <button className="admin-action-btn admin-btn-delete" onClick={() => deleteClientItem(c.id)}>
-                      <FaTrash /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              <tbody>
+                {filteredClients.map(c => (
+                  <tr key={c.id}>
+                    <td>
+                      {c.logo_path ? (
+                        <img
+                          src={getAssetUrl(c.logo_path)}
+                          alt={c.name}
+                          style={{ height: '36px', objectFit: 'contain', maxWidth: '80px' }}
+                          onError={e => { e.target.style.opacity = '0'; }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>No logo</span>
+                      )}
+                    </td>
+                    <td>{c.name}</td>
+                    <td>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        background: c.category === 'Brand' ? '#f59e0b22' : '#10b98122',
+                        color: c.category === 'Brand' ? '#d97706' : '#059669',
+                        padding: '2px 8px',
+                        borderRadius: '12px'
+                      }}>
+                        {c.category === 'Brand' ? 'Global Brand' : 'Prestigious Client'}
+                      </span>
+                    </td>
+                    <td><span className={`badge ${c.status === 'Publish' ? 'publish' : 'draft'}`}>{c.status}</span></td>
+                    <td>{c.sort_order}</td>
+                    <td>
+                      <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                        setEditingClient(c);
+                        setClientForm(c);
+                        setClientLogo(null);
+                      }}>
+                        <FaEdit /> Edit
+                      </button>
+                      <button className="admin-action-btn admin-btn-delete" onClick={() => deleteClientItem(c.id)}>
+                        <FaTrash /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

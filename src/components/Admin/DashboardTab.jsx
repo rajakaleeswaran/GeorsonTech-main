@@ -85,10 +85,10 @@ function DashboardTab({
           <button onClick={() => { setActiveTab('product_categories'); setEditingProductCategory('new'); setProductCategoryForm({ name: '', slug: '' }); }} className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
             <FaPlus /> Create Product Category
           </button>
-          <button onClick={() => { setActiveTab('clients'); setEditingClient('new'); setClientForm({ name: '', sort_order: 0, status: 'Publish' }); }} className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
+          <button onClick={() => { setActiveTab('clients'); setEditingClient('new'); setClientForm({ name: '', sort_order: 0, status: 'Publish', category: 'Client' }); }} className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
             <FaPlus /> Add Client
           </button>
-          <button onClick={() => { setActiveTab('blogs'); setEditingBlog('new'); setBlogForm({ category_id: '', title: '', slug: '', excerpt: '', content: '', status: 'Draft', seo_title: '', meta_description: '', seo_keywords: '' }); }} className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
+          <button onClick={() => { setActiveTab('blogs'); setEditingBlog('new'); setBlogForm({ category_id: '', category_name: '', title: '', slug: '', excerpt: '', content: '', status: 'Draft', seo_title: '', meta_description: '', seo_keywords: '' }); }} className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
             <FaPlus /> Create Blog Article
           </button>
         </div>
