@@ -1248,9 +1248,9 @@ export default function useAdminState() {
       video_url: productForm.video_url || '',
       is_featured: !!productForm.is_featured,
       image_path: uploadedImgPath,
-      pdf_brochure_path: uploadedBrochurePath,
-      brochure_path: uploadedBrochurePath
+      pdf_brochure_path: uploadedBrochurePath
     };
+
 
     console.log('[saveProduct Step 4] Supabase payload BEFORE write:', JSON.stringify(supabasePayload));
 
