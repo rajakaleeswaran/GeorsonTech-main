@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase } from '../config/supabase.js';
 
 // Custom slugify helper to avoid external dependency
 const slugify = (text) => {
@@ -182,7 +183,13 @@ export const createSolution = async (req, res) => {
     if (!name) return res.status(400).json({ message: 'Solution name is required' });
     
     const finalSlug = slug || slugify(name);
-    const image_path = req.file ? normalizePath(req.file.path) : null;
+    let image_path = req.body.image_path || null;
+
+    if (req.file) {
+      image_path = await uploadImageToSupabase(req.file);
+    }
+
+    console.log('[Create Solution Payload]', { name, finalSlug, image_path });
 
     const [result] = await connection.query(
       `INSERT INTO solutions (category_id, name, slug, description, image_path, icon, service_descriptions, sort_order, status)
@@ -198,7 +205,7 @@ export const createSolution = async (req, res) => {
     await updateAssociations(connection, solutionId, parsedIndIds, parsedProdIds);
 
     await connection.commit();
-    return res.json({ message: 'Solution successfully created', id: solutionId });
+    return res.json({ message: 'Solution successfully created', id: solutionId, image_path });
   } catch (error) {
     if (connection) await connection.rollback();
     return handleDbError(error, 'Failed to create solution', res);
@@ -218,19 +225,26 @@ export const updateSolution = async (req, res) => {
     if (!name) return res.status(400).json({ message: 'Solution name is required' });
     const finalSlug = slug || slugify(name);
 
+    let image_path = req.body.image_path;
+    if (req.file) {
+      image_path = await uploadImageToSupabase(req.file);
+    }
+
     let updateQuery = `
       UPDATE solutions 
       SET category_id = ?, name = ?, slug = ?, description = ?, icon = ?, service_descriptions = ?, sort_order = ?, status = ?
     `;
     const params = [category_id || null, name, finalSlug, description || null, icon || null, service_descriptions || null, sort_order || 0, status || 'Publish'];
 
-    if (req.file) {
+    if (image_path !== undefined && image_path !== null && image_path !== '') {
       updateQuery += ', image_path = ?';
-      params.push(normalizePath(req.file.path));
+      params.push(image_path);
     }
 
     updateQuery += ' WHERE id = ?';
     params.push(id);
+
+    console.log('[Update Solution Payload]', { id, name, image_path });
 
     await connection.query(updateQuery, params);
 
@@ -240,7 +254,7 @@ export const updateSolution = async (req, res) => {
     await updateAssociations(connection, id, parsedIndIds, parsedProdIds);
 
     await connection.commit();
-    return res.json({ message: 'Solution successfully updated' });
+    return res.json({ message: 'Solution successfully updated', image_path });
   } catch (error) {
     if (connection) await connection.rollback();
     return handleDbError(error, 'Failed to update solution', res);
@@ -248,6 +262,7 @@ export const updateSolution = async (req, res) => {
     if (connection) connection.release();
   }
 };
+
 
 export const deleteSolution = async (req, res) => {
   try {

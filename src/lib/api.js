@@ -5,7 +5,7 @@ export const UPLOADS_BASE_URL = import.meta.env.VITE_UPLOADS_BASE_URL || 'http:/
 
 /**
  * Resolves full asset URL for uploaded files, resumes, or remote image URLs.
- * When Supabase is active, converts any local/relative path to a Supabase Storage public URL.
+ * Always prioritizes direct public Supabase Storage URLs.
  * @param {string} path
  * @param {string} [type] Optional asset type: 'resume' | 'image' | 'brochure'
  * @returns {string}
@@ -13,23 +13,16 @@ export const UPLOADS_BASE_URL = import.meta.env.VITE_UPLOADS_BASE_URL || 'http:/
 export function getAssetUrl(path, type = 'general') {
   if (!path) return '';
 
-  let cleanPath = path.replace(/\\/g, '/');
+  let cleanPath = path.replace(/\\/g, '/').trim();
 
-  // Already a valid absolute non-localhost URL → return as-is
-  if (
-    (cleanPath.startsWith('https://') || cleanPath.startsWith('data:')) &&
-    !cleanPath.includes('localhost') &&
-    !cleanPath.includes('127.0.0.1')
-  ) {
+  // If already an absolute HTTP/HTTPS URL or data URL -> return as-is
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://') || cleanPath.startsWith('data:')) {
     return cleanPath;
   }
 
   // Check if Supabase is configured
   const activeSupaUrl = import.meta.env.VITE_SUPABASE_URL || supabaseUrl;
-  const isSupabaseActive = Boolean(activeSupaUrl && !activeSupaUrl.includes('placeholder.supabase.co'));
-
-  if (isSupabaseActive) {
-    // Determine bucket — check brochure BEFORE pdf extension (brochures are also PDFs)
+  if (activeSupaUrl && !activeSupaUrl.includes('placeholder.supabase.co')) {
     let bucket = 'uploads';
     if (type === 'brochure' || cleanPath.includes('/brochures/')) {
       bucket = 'brochures';
@@ -42,25 +35,17 @@ export function getAssetUrl(path, type = 'general') {
       bucket = 'resumes';
     }
 
-    // Extract just the filename (files are uploaded flat to bucket root)
     const rawFileName = cleanPath.split('/').pop();
     let fileName = rawFileName;
     try { fileName = decodeURIComponent(rawFileName); } catch (_) {}
 
     if (fileName) {
-      try {
-        const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(fileName);
-        if (publicData?.publicUrl) return publicData.publicUrl;
-      } catch (_) {
-        // Fallback below
-      }
+      return `${activeSupaUrl}/storage/v1/object/public/${bucket}/${encodeURIComponent(fileName)}`;
     }
   }
 
-  // Final fallback: return local Express URL
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) return cleanPath;
+  // Fallback if not absolute and Supabase inactive
   if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
-
   if (!cleanPath.startsWith('uploads/')) {
     if (type === 'resume' || cleanPath.endsWith('.pdf') || cleanPath.endsWith('.doc') || cleanPath.endsWith('.docx')) {
       cleanPath = `uploads/resumes/${cleanPath}`;
@@ -73,4 +58,5 @@ export function getAssetUrl(path, type = 'general') {
 
   return `${UPLOADS_BASE_URL}/${cleanPath}`;
 }
+
 

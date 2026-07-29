@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase } from '../config/supabase.js';
 
 // Public endpoints
 export const getIndustries = async (req, res) => {
@@ -37,20 +38,26 @@ export const getIndustryBySlug = async (req, res) => {
 // Admin CRUD endpoints
 export const createIndustry = async (req, res) => {
   const { name, slug, description, detailed_description, sort_order, status } = req.body;
-  const image_path = req.file ? req.file.path.replace(/\\/g, '/') : null;
 
   if (!name || !slug) {
     return res.status(400).json({ message: 'Name and slug are required' });
   }
 
   try {
+    let image_path = req.body.image_path || null;
+    if (req.file) {
+      image_path = await uploadImageToSupabase(req.file);
+    }
+
+    console.log('[Create Industry Payload]', { name, slug, image_path });
+
     const [result] = await pool.query(
       `INSERT INTO industries (name, slug, description, detailed_description, image_path, sort_order, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [name, slug, description || null, detailed_description || null, image_path, parseInt(sort_order || 0), status || 'Publish']
     );
 
-    return res.status(201).json({ message: 'Industry created successfully', industryId: result.insertId });
+    return res.status(201).json({ message: 'Industry created successfully', industryId: result.insertId, image_path });
   } catch (error) {
     return handleDbError(error, 'Failed to create industry', res);
   }
@@ -67,7 +74,15 @@ export const updateIndustry = async (req, res) => {
     }
 
     const current = industries[0];
-    const image_path = req.file ? req.file.path.replace(/\\/g, '/') : current.image_path;
+    let image_path = current.image_path;
+
+    if (req.file) {
+      image_path = await uploadImageToSupabase(req.file);
+    } else if (req.body.image_path !== undefined && req.body.image_path !== null && req.body.image_path !== '') {
+      image_path = req.body.image_path;
+    }
+
+    console.log('[Update Industry Payload]', { id, name, image_path });
 
     await pool.query(
       `UPDATE industries 
@@ -76,11 +91,12 @@ export const updateIndustry = async (req, res) => {
       [name, slug, description || null, detailed_description || null, image_path, parseInt(sort_order || 0), status || 'Publish', id]
     );
 
-    return res.json({ message: 'Industry updated successfully' });
+    return res.json({ message: 'Industry updated successfully', image_path });
   } catch (error) {
     return handleDbError(error, 'Failed to update industry', res);
   }
 };
+
 
 export const deleteIndustry = async (req, res) => {
   const { id } = req.params;

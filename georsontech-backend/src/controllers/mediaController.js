@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
-import fs from 'fs';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase, uploadBrochureToSupabase } from '../config/supabase.js';
 
 export const getMedia = async (req, res) => {
   try {
@@ -17,12 +17,21 @@ export const uploadMedia = async (req, res) => {
   }
 
   try {
-    const { originalname, path: filePath, size, mimetype } = req.file;
-    const normPath = filePath.replace(/\\/g, '/');
+    const { originalname, size, mimetype } = req.file;
+    let publicUrl;
+
+    if (mimetype.includes('pdf')) {
+      publicUrl = await uploadBrochureToSupabase(req.file);
+    } else {
+      publicUrl = await uploadImageToSupabase(req.file);
+    }
+
+    console.log('[Upload Media Success]', { originalname, publicUrl, size, mimetype });
+
     const [result] = await pool.query(
       `INSERT INTO media_library (file_name, file_path, file_size, file_type) 
        VALUES (?, ?, ?, ?)`,
-      [originalname, normPath, size, mimetype]
+      [originalname, publicUrl, size, mimetype]
     );
 
     return res.status(201).json({
@@ -30,7 +39,7 @@ export const uploadMedia = async (req, res) => {
       file: {
         id: result.insertId,
         file_name: originalname,
-        file_path: normPath,
+        file_path: publicUrl,
         file_size: size,
         file_type: mimetype
       }
@@ -49,12 +58,6 @@ export const deleteMedia = async (req, res) => {
       return res.status(404).json({ message: 'Asset not found' });
     }
 
-    const file = rows[0];
-
-    if (fs.existsSync(file.file_path)) {
-      fs.unlinkSync(file.file_path);
-    }
-
     await pool.query('DELETE FROM media_library WHERE id = ?', [id]);
 
     return res.json({ message: 'Asset deleted successfully' });
@@ -62,3 +65,4 @@ export const deleteMedia = async (req, res) => {
     return handleDbError(error, 'Failed to delete asset', res);
   }
 };
+

@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase, uploadBrochureToSupabase } from '../config/supabase.js';
 
 // Public endpoints
 export const getServices = async (req, res) => {
@@ -45,21 +46,31 @@ export const getServiceBySlug = async (req, res) => {
 // Admin CRUD endpoints
 export const createService = async (req, res) => {
   const { title, slug, short_description, detailed_description, features, sort_order, status } = req.body;
-  const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : null;
-  const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : null;
 
   if (!title || !slug) {
     return res.status(400).json({ message: 'Title and slug are required' });
   }
 
   try {
+    let image_path = req.body.image_path || null;
+    let pdf_brochure_path = req.body.pdf_brochure_path || null;
+
+    if (req.files && req.files['image']) {
+      image_path = await uploadImageToSupabase(req.files['image'][0]);
+    }
+    if (req.files && req.files['brochure']) {
+      pdf_brochure_path = await uploadBrochureToSupabase(req.files['brochure'][0]);
+    }
+
+    console.log('[Create Service Payload]', { title, slug, image_path, pdf_brochure_path });
+
     const [result] = await pool.query(
       `INSERT INTO services (title, slug, short_description, detailed_description, features, image_path, pdf_brochure_path, sort_order, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [title, slug, short_description || null, detailed_description || null, features || null, image_path, pdf_brochure_path, parseInt(sort_order || 0), status || 'Publish']
     );
 
-    return res.status(201).json({ message: 'Service created successfully', serviceId: result.insertId });
+    return res.status(201).json({ message: 'Service created successfully', serviceId: result.insertId, image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to create service', res);
   }
@@ -76,8 +87,22 @@ export const updateService = async (req, res) => {
     }
 
     const current = services[0];
-    const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : current.image_path;
-    const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : current.pdf_brochure_path;
+    let image_path = current.image_path;
+    let pdf_brochure_path = current.pdf_brochure_path;
+
+    if (req.files && req.files['image']) {
+      image_path = await uploadImageToSupabase(req.files['image'][0]);
+    } else if (req.body.image_path !== undefined && req.body.image_path !== null && req.body.image_path !== '') {
+      image_path = req.body.image_path;
+    }
+
+    if (req.files && req.files['brochure']) {
+      pdf_brochure_path = await uploadBrochureToSupabase(req.files['brochure'][0]);
+    } else if (req.body.pdf_brochure_path !== undefined && req.body.pdf_brochure_path !== null && req.body.pdf_brochure_path !== '') {
+      pdf_brochure_path = req.body.pdf_brochure_path;
+    }
+
+    console.log('[Update Service Payload]', { id, title, image_path, pdf_brochure_path });
 
     await pool.query(
       `UPDATE services 
@@ -86,11 +111,12 @@ export const updateService = async (req, res) => {
       [title, slug, short_description || null, detailed_description || null, features || null, image_path, pdf_brochure_path, parseInt(sort_order || 0), status || 'Publish', id]
     );
 
-    return res.json({ message: 'Service updated successfully' });
+    return res.json({ message: 'Service updated successfully', image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to update service', res);
   }
 };
+
 
 export const deleteService = async (req, res) => {
   const { id } = req.params;

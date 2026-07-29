@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase, uploadBrochureToSupabase } from '../config/supabase.js';
 
 // Public endpoints
 export const getProducts = async (req, res) => {
@@ -45,21 +46,32 @@ export const getProductCategories = async (req, res) => {
 // Admin CRUD endpoints
 export const createProduct = async (req, res) => {
   const { category_id, name, slug, description, specifications, video_url, is_featured } = req.body;
-  const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : null;
-  const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : null;
 
   if (!name || !slug) {
     return res.status(400).json({ message: 'Name and slug are required' });
   }
 
   try {
+    let image_path = req.body.image_path || null;
+    let pdf_brochure_path = req.body.pdf_brochure_path || null;
+
+    if (req.files && req.files['image']) {
+      image_path = await uploadImageToSupabase(req.files['image'][0]);
+    }
+
+    if (req.files && req.files['brochure']) {
+      pdf_brochure_path = await uploadBrochureToSupabase(req.files['brochure'][0]);
+    }
+
+    console.log('[Create Product Payload]', { name, slug, image_path, pdf_brochure_path });
+
     const [result] = await pool.query(
       `INSERT INTO products (category_id, name, slug, description, specifications, image_path, pdf_brochure_path, video_url, is_featured) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [category_id || null, name, slug, description, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true]
+      [category_id || null, name, slug, description || null, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true]
     );
 
-    return res.status(201).json({ message: 'Product created successfully', productId: result.insertId });
+    return res.status(201).json({ message: 'Product created successfully', productId: result.insertId, image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to create product', res);
   }
@@ -76,21 +88,36 @@ export const updateProduct = async (req, res) => {
     }
 
     const current = products[0];
-    const image_path = req.files && req.files['image'] ? req.files['image'][0].path.replace(/\\/g, '/') : current.image_path;
-    const pdf_brochure_path = req.files && req.files['brochure'] ? req.files['brochure'][0].path.replace(/\\/g, '/') : current.pdf_brochure_path;
+    let image_path = current.image_path;
+    let pdf_brochure_path = current.pdf_brochure_path;
+
+    if (req.files && req.files['image']) {
+      image_path = await uploadImageToSupabase(req.files['image'][0]);
+    } else if (req.body.image_path !== undefined && req.body.image_path !== null && req.body.image_path !== '') {
+      image_path = req.body.image_path;
+    }
+
+    if (req.files && req.files['brochure']) {
+      pdf_brochure_path = await uploadBrochureToSupabase(req.files['brochure'][0]);
+    } else if (req.body.pdf_brochure_path !== undefined && req.body.pdf_brochure_path !== null && req.body.pdf_brochure_path !== '') {
+      pdf_brochure_path = req.body.pdf_brochure_path;
+    }
+
+    console.log('[Update Product Payload]', { id, name, image_path, pdf_brochure_path });
 
     await pool.query(
       `UPDATE products 
        SET category_id = ?, name = ?, slug = ?, description = ?, specifications = ?, image_path = ?, pdf_brochure_path = ?, video_url = ?, is_featured = ? 
        WHERE id = ?`,
-      [category_id || null, name, slug, description, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true, id]
+      [category_id || null, name, slug, description || null, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true, id]
     );
 
-    return res.json({ message: 'Product updated successfully' });
+    return res.json({ message: 'Product updated successfully', image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to update product', res);
   }
 };
+
 
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;

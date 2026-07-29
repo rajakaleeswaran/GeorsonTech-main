@@ -1,8 +1,6 @@
 import pool from '../config/db.js';
 import { sendEnquiryEmail, sendCareerEmail } from '../utils/emailService.js';
-import { uploadToSupabase } from '../config/supabase.js';
-import fs from 'fs';
-
+import { uploadResumeToSupabase } from '../config/supabase.js';
 
 // In-memory fallback store when MySQL is offline
 const memoryEnquiries = [];
@@ -66,22 +64,13 @@ export const createCareerApplication = async (req, res) => {
     return res.status(400).json({ message: 'Resume file upload is required' });
   }
 
-  let resumePath = req.file.path.replace(/\\/g, '/'); // local path as fallback
-
-  // Try uploading to Supabase Storage using service key (bypasses RLS)
+  let resumePath = null;
   try {
-    const cleanFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileName = `${Date.now()}_${cleanFileName}`;
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const supabaseUrl = await uploadToSupabase('resumes', fileName, fileBuffer, req.file.mimetype);
-    if (supabaseUrl) {
-      resumePath = supabaseUrl;
-      console.log('[Backend] Resume uploaded to Supabase Storage:', supabaseUrl);
-    } else {
-      console.warn('[Backend] Supabase upload failed, storing local path:', resumePath);
-    }
+    resumePath = await uploadResumeToSupabase(req.file);
+    console.log('[Backend] Resume uploaded to Supabase Storage:', resumePath);
   } catch (e) {
-    console.warn('[Backend] Supabase upload exception:', e.message);
+    console.error('[Backend] Supabase resume upload error:', e.message);
+    return res.status(500).json({ message: `Resume upload failed: ${e.message}` });
   }
 
   // Always send email
@@ -113,6 +102,7 @@ export const createCareerApplication = async (req, res) => {
     });
   }
 };
+
 
 
 // Admin Endpoints

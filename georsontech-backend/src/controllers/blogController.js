@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { handleDbError } from '../utils/logger.js';
+import { uploadImageToSupabase } from '../config/supabase.js';
 
 // Public endpoints
 export const getBlogs = async (req, res) => {
@@ -68,7 +69,6 @@ export const getBlogCategories = async (req, res) => {
 // Admin CRUD Endpoints
 export const createBlog = async (req, res) => {
   const { category_id, title, slug, excerpt, content, status, seo_title, meta_description, seo_keywords } = req.body;
-  const featured_image = req.file ? req.file.path.replace(/\\/g, '/') : null;
   const author_id = req.user?.id || 1;
 
   if (!title || !slug || !content) {
@@ -76,13 +76,20 @@ export const createBlog = async (req, res) => {
   }
 
   try {
+    let featured_image = req.body.featured_image || null;
+    if (req.file) {
+      featured_image = await uploadImageToSupabase(req.file);
+    }
+
+    console.log('[Create Blog Payload]', { title, slug, featured_image });
+
     const [result] = await pool.query(
       `INSERT INTO blogs (category_id, author_id, title, slug, excerpt, content, featured_image, status, seo_title, meta_description, seo_keywords) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [category_id || null, author_id, title, slug, excerpt || null, content, featured_image, status || 'Draft', seo_title || null, meta_description || null, seo_keywords || null]
     );
 
-    return res.status(201).json({ message: 'Blog created successfully', blogId: result.insertId });
+    return res.status(201).json({ message: 'Blog created successfully', blogId: result.insertId, featured_image });
   } catch (error) {
     return handleDbError(error, 'Failed to create blog post', res);
   }
@@ -99,7 +106,15 @@ export const updateBlog = async (req, res) => {
     }
 
     const current = blogs[0];
-    const featured_image = req.file ? req.file.path.replace(/\\/g, '/') : current.featured_image;
+    let featured_image = current.featured_image;
+
+    if (req.file) {
+      featured_image = await uploadImageToSupabase(req.file);
+    } else if (req.body.featured_image !== undefined && req.body.featured_image !== null && req.body.featured_image !== '') {
+      featured_image = req.body.featured_image;
+    }
+
+    console.log('[Update Blog Payload]', { id, title, featured_image });
 
     await pool.query(
       `UPDATE blogs 
@@ -108,11 +123,12 @@ export const updateBlog = async (req, res) => {
       [category_id || null, title, slug, excerpt || null, content, featured_image, status || 'Draft', seo_title || null, meta_description || null, seo_keywords || null, id]
     );
 
-    return res.json({ message: 'Blog post updated successfully' });
+    return res.json({ message: 'Blog post updated successfully', featured_image });
   } catch (error) {
     return handleDbError(error, 'Failed to update blog post', res);
   }
 };
+
 
 export const deleteBlog = async (req, res) => {
   const { id } = req.params;
