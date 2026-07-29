@@ -330,27 +330,22 @@ export default function useAdminState() {
       setProductCategories(data);
     });
     await fetchWithFallback('/products', 'products', (data) => {
-      const cached = getInitialCache('products', []);
       const enriched = data.map(p => {
-        const local = cached.find(c => String(c.id) === String(p.id));
         const cat = cats.find(c => String(c.id) === String(p.category_id) || c.name === p.category_id || c.slug === p.category_id);
-
-        const finalImg = (p.image_path && p.image_path.startsWith('http'))
-          ? p.image_path
-          : (local?.image_path || p.image_path);
-
-        const finalBrochure = (p.brochure_path && p.brochure_path.startsWith('http'))
-          ? p.brochure_path
-          : (local?.brochure_path || p.brochure_path);
+        const imgPath = p.image_path || p.image || null;
+        const brochurePath = p.pdf_brochure_path || p.brochure_path || null;
 
         return {
           ...p,
           category_name: p.category_name || (cat ? cat.name : (p.category_id ? String(p.category_id) : 'Uncategorized')),
-          image_path: finalImg,
-          brochure_path: finalBrochure
+          image_path: imgPath,
+          pdf_brochure_path: brochurePath,
+          brochure_path: brochurePath
         };
       });
+      console.log('[Step 4 fetchProducts]', enriched);
       setProducts(enriched);
+      try { localStorage.setItem('cms_cache_products', JSON.stringify(enriched)); } catch (_) {}
     });
   };
 
@@ -362,63 +357,52 @@ export default function useAdminState() {
       setBlogCategories(data);
     });
     await fetchWithFallback('/blogs', 'blogs', (data) => {
-      const cached = getInitialCache('blogs', []);
       const enriched = data.map(b => {
-        const local = cached.find(c => String(c.id) === String(b.id));
         const cat = cats.find(c => String(c.id) === String(b.category_id) || c.name === b.category_id || c.slug === b.category_id);
-
-        const finalImg = (b.featured_image && b.featured_image.startsWith('http'))
-          ? b.featured_image
-          : (local?.featured_image || b.featured_image);
+        const imgPath = b.featured_image || b.image_path || null;
 
         return {
           ...b,
           category_name: b.category_name || (cat ? cat.name : (b.category_id ? String(b.category_id) : 'General')),
-          featured_image: finalImg
+          featured_image: imgPath,
+          image_path: imgPath
         };
       });
       setBlogs(enriched);
+      try { localStorage.setItem('cms_cache_blogs', JSON.stringify(enriched)); } catch (_) {}
     });
   };
 
   // Fetch services list
   const fetchServices = () => fetchWithFallback('/services', 'services', (data) => {
-    const cached = getInitialCache('services', []);
-    const enriched = data.map(s => {
-      const local = cached.find(c => String(c.id) === String(s.id));
-      return {
-        ...s,
-        image_path: (s.image_path && s.image_path.startsWith('http')) ? s.image_path : (local?.image_path || s.image_path),
-        brochure_path: (s.brochure_path && s.brochure_path.startsWith('http')) ? s.brochure_path : (local?.brochure_path || s.brochure_path)
-      };
-    });
+    const enriched = data.map(s => ({
+      ...s,
+      image_path: s.image_path || null,
+      pdf_brochure_path: s.pdf_brochure_path || s.brochure_path || null,
+      brochure_path: s.pdf_brochure_path || s.brochure_path || null
+    }));
     setServices(enriched);
+    try { localStorage.setItem('cms_cache_services', JSON.stringify(enriched)); } catch (_) {}
   });
 
   // Fetch industries list
   const fetchIndustries = () => fetchWithFallback('/industries', 'industries', (data) => {
-    const cached = getInitialCache('industries', []);
-    const enriched = data.map(i => {
-      const local = cached.find(c => String(c.id) === String(i.id));
-      return {
-        ...i,
-        image_path: (i.image_path && i.image_path.startsWith('http')) ? i.image_path : (local?.image_path || i.image_path)
-      };
-    });
+    const enriched = data.map(i => ({
+      ...i,
+      image_path: i.image_path || null
+    }));
     setIndustries(enriched);
+    try { localStorage.setItem('cms_cache_industries', JSON.stringify(enriched)); } catch (_) {}
   });
 
   // Fetch clients & brand logos
   const fetchClients = () => fetchWithFallback('/clients', 'clients', (data) => {
-    const cached = getInitialCache('clients', []);
-    const enriched = data.map(c => {
-      const local = cached.find(l => String(l.id) === String(c.id));
-      return {
-        ...c,
-        logo_path: (c.logo_path && c.logo_path.startsWith('http')) ? c.logo_path : (local?.logo_path || c.logo_path)
-      };
-    });
+    const enriched = data.map(c => ({
+      ...c,
+      logo_path: c.logo_path || null
+    }));
     setClients(enriched);
+    try { localStorage.setItem('cms_cache_clients', JSON.stringify(enriched)); } catch (_) {}
   });
 
   // Fetch solutions and solution categories
@@ -429,19 +413,19 @@ export default function useAdminState() {
       setSolutionCategories(data);
     });
     await fetchWithFallback('/solutions', 'solutions', (data) => {
-      const cached = getInitialCache('solutions', []);
       const enriched = data.map(s => {
-        const local = cached.find(c => String(c.id) === String(s.id));
         const cat = cats.find(c => String(c.id) === String(s.category_id) || c.name === s.category_id || c.slug === s.category_id);
         return {
           ...s,
           category_name: s.category_name || (cat ? cat.name : (s.category_id ? String(s.category_id) : '')),
-          image_path: (s.image_path && s.image_path.startsWith('http')) ? s.image_path : (local?.image_path || s.image_path)
+          image_path: s.image_path || null
         };
       });
       setSolutions(enriched);
+      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(enriched)); } catch (_) {}
     });
   };
+
 
 
   // Fetch media library assets (admin-protected)
@@ -1002,25 +986,39 @@ export default function useAdminState() {
 
   const uploadImageToSupabase = async (file, folder = 'uploads') => {
     if (!file) return null;
-    const dataUrl = await compressImage(file);
     try {
-      const fileExt = (file.name.split('.').pop() || 'png').toLowerCase();
-      const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-      const bucketName = folder === 'brochures' ? 'brochures' : (folder === 'resumes' ? 'resumes' : 'uploads');
+      const originalName = file.name || 'file';
+      const fileExt = (originalName.split('.').pop() || 'png').toLowerCase();
+      const nameWithoutExt = originalName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${Date.now()}_${nameWithoutExt}.${fileExt}`;
+      const bucketName = folder === 'brochures' || fileExt === 'pdf' ? 'brochures' : (folder === 'resumes' ? 'resumes' : 'uploads');
+
+      console.log(`[Frontend Supabase Storage] Uploading ${fileName} to bucket '${bucketName}'...`);
+
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+        .upload(fileName, file, { contentType: file.type || 'application/octet-stream', cacheControl: '3600', upsert: true });
 
       if (!error && data) {
         const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-        if (publicData?.publicUrl) return publicData.publicUrl;
+        if (publicData?.publicUrl) {
+          console.log(`[Frontend Supabase Upload Success] Public URL: ${publicData.publicUrl}`);
+          return publicData.publicUrl;
+        }
+      } else if (error) {
+        console.warn(`[Frontend Supabase Upload Error] Bucket: ${bucketName}, Error: ${error.message}`);
       }
     } catch (err) {
-      console.warn('Supabase storage upload exception:', err);
+      console.warn('[Frontend Supabase Upload Exception]:', err);
     }
-    // Return compressed DataURL so image works 100% on refresh and on public site
-    return dataUrl;
+
+    // Image compression fallback for images only
+    if (file.type && file.type.startsWith('image/')) {
+      return await compressImage(file);
+    }
+    return null;
   };
+
 
 
 
@@ -1035,8 +1033,8 @@ export default function useAdminState() {
       ? `${API_BASE_URL}/admin/services`
       : `${API_BASE_URL}/admin/services/${editingService.id}`;
 
-    let uploadedImgPath = editingService?.image_path || null;
-    let uploadedBrochurePath = editingService?.brochure_path || null;
+    let uploadedImgPath = editingService?.image_path || serviceForm?.image_path || null;
+    let uploadedBrochurePath = editingService?.pdf_brochure_path || editingService?.brochure_path || serviceForm?.pdf_brochure_path || serviceForm?.brochure_path || null;
 
     if (serviceImage) {
       const imgUrl = await uploadImageToSupabase(serviceImage, 'services');
@@ -1055,6 +1053,8 @@ export default function useAdminState() {
     formData.append('features', serviceForm.features || '');
     formData.append('sort_order', serviceForm.sort_order || 0);
     formData.append('status', serviceForm.status || 'Publish');
+    if (uploadedImgPath) formData.append('image_path', uploadedImgPath);
+    if (uploadedBrochurePath) formData.append('pdf_brochure_path', uploadedBrochurePath);
     if (serviceImage) formData.append('image', serviceImage);
     if (serviceBrochure) formData.append('brochure', serviceBrochure);
 
@@ -1085,12 +1085,10 @@ export default function useAdminState() {
         features: serviceForm.features || '',
         sort_order: Number(serviceForm.sort_order) || 0,
         status: serviceForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
-        ...(uploadedBrochurePath ? { pdf_brochure_path: uploadedBrochurePath, brochure_path: uploadedBrochurePath } : {})
+        image_path: uploadedImgPath,
+        pdf_brochure_path: uploadedBrochurePath,
+        brochure_path: uploadedBrochurePath
       };
-
-
-
 
       let supaRes;
       if (isNew) {
@@ -1113,13 +1111,13 @@ export default function useAdminState() {
       console.warn("Supabase service save exception:", err);
     }
 
-
     // Always update local React state & localStorage cache
     const newSvc = {
       id: isNew ? Date.now() : editingService.id,
       ...serviceForm,
       slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       image_path: uploadedImgPath,
+      pdf_brochure_path: uploadedBrochurePath,
       brochure_path: uploadedBrochurePath
     };
 
@@ -1136,6 +1134,10 @@ export default function useAdminState() {
     setServiceImage(null);
     setServiceBrochure(null);
   };
+
+
+
+
 
 
   const deleteServiceItem = async (id) => {
@@ -1194,8 +1196,8 @@ export default function useAdminState() {
       }
     }
 
-    let uploadedImgPath = editingProduct?.image_path || null;
-    let uploadedBrochurePath = editingProduct?.brochure_path || null;
+    let uploadedImgPath = editingProduct?.image_path || productForm?.image_path || null;
+    let uploadedBrochurePath = editingProduct?.pdf_brochure_path || editingProduct?.brochure_path || productForm?.pdf_brochure_path || productForm?.brochure_path || null;
 
     if (productImage) {
       const imgUrl = await uploadImageToSupabase(productImage, 'products');
@@ -1205,6 +1207,9 @@ export default function useAdminState() {
       const pdfUrl = await uploadImageToSupabase(productBrochure, 'brochures');
       if (pdfUrl) uploadedBrochurePath = pdfUrl;
     }
+
+    // Step 1 Verification Log
+    console.log('[Step 1 Upload Result]', { uploadedImageUrl: uploadedImgPath, uploadedBrochureUrl: uploadedBrochurePath });
 
     const catIdNum = Number(productForm.category_id);
     const validCatId = productForm.category_id
@@ -1227,6 +1232,8 @@ export default function useAdminState() {
     formData.append('specifications', specsJson || '[]');
     formData.append('video_url', productForm.video_url || '');
     formData.append('is_featured', productForm.is_featured);
+    if (uploadedImgPath) formData.append('image_path', uploadedImgPath);
+    if (uploadedBrochurePath) formData.append('pdf_brochure_path', uploadedBrochurePath);
     if (productImage) formData.append('image', productImage);
     if (productBrochure) formData.append('brochure', productBrochure);
 
@@ -1258,10 +1265,12 @@ export default function useAdminState() {
         specifications: specsJson || '[]',
         video_url: productForm.video_url || '',
         is_featured: !!productForm.is_featured,
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {}),
-        ...(uploadedBrochurePath ? { pdf_brochure_path: uploadedBrochurePath, brochure_path: uploadedBrochurePath } : {})
+        image_path: uploadedImgPath,
+        pdf_brochure_path: uploadedBrochurePath,
+        brochure_path: uploadedBrochurePath
       };
 
+      console.log('[Step 2 DB Verification Payload]', payload);
 
       let supaRes;
       if (isNew) {
@@ -1269,8 +1278,6 @@ export default function useAdminState() {
       } else {
         supaRes = await supabase.from('products').update(payload).eq('id', editingProduct.id);
       }
-
-
 
       if (!supaRes.error) {
         toast.success("✅ Product saved to Cloud Database!");
@@ -1286,7 +1293,6 @@ export default function useAdminState() {
       console.warn("Supabase product save exception:", err);
     }
 
-
     // Always update local React state & localStorage cache with complete product data
     const newProd = {
       id: isNew ? Date.now() : editingProduct.id,
@@ -1294,6 +1300,7 @@ export default function useAdminState() {
       category_id: validCatId,
       category_name: categoryName,
       image_path: uploadedImgPath,
+      pdf_brochure_path: uploadedBrochurePath,
       brochure_path: uploadedBrochurePath,
       specifications: specsJson || '[]'
     };
@@ -1311,6 +1318,7 @@ export default function useAdminState() {
     setProductImage(null);
     setProductBrochure(null);
   };
+
 
 
 

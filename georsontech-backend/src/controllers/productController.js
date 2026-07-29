@@ -63,7 +63,8 @@ export const createProduct = async (req, res) => {
       pdf_brochure_path = await uploadBrochureToSupabase(req.files['brochure'][0]);
     }
 
-    console.log('[Create Product Payload]', { name, slug, image_path, pdf_brochure_path });
+    // Step 1 Verification Log
+    console.log('[Step 1 Upload Result]', { uploadedImageUrl: image_path, uploadedBrochureUrl: pdf_brochure_path });
 
     const [result] = await pool.query(
       `INSERT INTO products (category_id, name, slug, description, specifications, image_path, pdf_brochure_path, video_url, is_featured) 
@@ -71,7 +72,15 @@ export const createProduct = async (req, res) => {
       [category_id || null, name, slug, description || null, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true]
     );
 
-    return res.status(201).json({ message: 'Product created successfully', productId: result.insertId, image_path, pdf_brochure_path });
+    const insertedId = result.insertId;
+
+    // Step 2 Verification Log
+    try {
+      const [dbRows] = await pool.query('SELECT image_path, pdf_brochure_path FROM products WHERE id = ?', [insertedId]);
+      console.log('[Step 2 DB Verification]', dbRows[0]);
+    } catch (_) {}
+
+    return res.status(201).json({ message: 'Product created successfully', productId: insertedId, image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to create product', res);
   }
@@ -103,7 +112,8 @@ export const updateProduct = async (req, res) => {
       pdf_brochure_path = req.body.pdf_brochure_path;
     }
 
-    console.log('[Update Product Payload]', { id, name, image_path, pdf_brochure_path });
+    // Step 1 Verification Log
+    console.log('[Step 1 Upload Result]', { uploadedImageUrl: image_path, uploadedBrochureUrl: pdf_brochure_path });
 
     await pool.query(
       `UPDATE products 
@@ -112,11 +122,18 @@ export const updateProduct = async (req, res) => {
       [category_id || null, name, slug, description || null, specifications || null, image_path, pdf_brochure_path, video_url || null, is_featured === 'true' || is_featured === true, id]
     );
 
+    // Step 2 Verification Log
+    try {
+      const [dbRows] = await pool.query('SELECT image_path, pdf_brochure_path FROM products WHERE id = ?', [id]);
+      console.log('[Step 2 DB Verification]', dbRows[0]);
+    } catch (_) {}
+
     return res.json({ message: 'Product updated successfully', image_path, pdf_brochure_path });
   } catch (error) {
     return handleDbError(error, 'Failed to update product', res);
   }
 };
+
 
 
 export const deleteProduct = async (req, res) => {

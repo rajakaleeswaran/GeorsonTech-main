@@ -181,18 +181,16 @@ function ProductsTab({
                     <td>{p.category_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Uncategorized</span>}</td>
                     <td>{p.is_featured ? <span style={{ color: 'green', fontWeight: 'bold' }}>✓ Yes</span> : 'No'}</td>
                     <td>
-                      {p.brochure_path ? (
+                      {(p.pdf_brochure_path || p.brochure_path) ? (
                         <a
-                          href={getAssetUrl(p.brochure_path, 'brochure')}
+                          href={getAssetUrl(p.pdf_brochure_path || p.brochure_path, 'brochure')}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          <FaFilePdf /> PDF
+                          <FaFilePdf /> View PDF
                         </a>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
-                      )}
+                      ) : <span style={{ color: '#94a3b8' }}>None</span>}
                     </td>
                     <td>
                       <button className="admin-action-btn admin-btn-edit" onClick={() => {
