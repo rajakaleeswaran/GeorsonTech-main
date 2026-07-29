@@ -1098,8 +1098,7 @@ export default function useAdminState() {
         sort_order: Number(serviceForm.sort_order) || 0,
         status: serviceForm.status || 'Publish',
         image_path: uploadedImgPath,
-        pdf_brochure_path: uploadedBrochurePath,
-        brochure_path: uploadedBrochurePath
+        pdf_brochure_path: uploadedBrochurePath
       };
 
       let supaRes;
@@ -1129,8 +1128,7 @@ export default function useAdminState() {
       ...serviceForm,
       slug: serviceForm.slug || serviceForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       image_path: uploadedImgPath,
-      pdf_brochure_path: uploadedBrochurePath,
-      brochure_path: uploadedBrochurePath
+      pdf_brochure_path: uploadedBrochurePath
     };
 
     setServices(prev => {
