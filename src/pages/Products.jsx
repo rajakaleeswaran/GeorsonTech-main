@@ -16,23 +16,32 @@ function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
-    // Fetch Categories
+    let catList = [];
     fetchCollection('/products/categories', 'product_categories')
-      .then(data => {
-        if (Array.isArray(data)) {
-          setCategories(["All", ...data.map(cat => cat.name)]);
+      .then(catData => {
+        if (Array.isArray(catData)) {
+          catList = catData;
+          setCategories(["All", ...catData.map(cat => cat.name)]);
+        }
+        return fetchCollection('/products', 'products');
+      })
+      .then(prodData => {
+        if (Array.isArray(prodData)) {
+          const enriched = prodData.map(p => {
+            const matchedCat = catList.find(c =>
+              String(c.id) === String(p.category_id) ||
+              c.name?.toLowerCase() === String(p.category_id).toLowerCase() ||
+              c.slug?.toLowerCase() === String(p.category_id).toLowerCase()
+            );
+            return {
+              ...p,
+              category_name: p.category_name || (matchedCat ? matchedCat.name : (p.category_id ? String(p.category_id) : 'General'))
+            };
+          });
+          setProducts(enriched);
         }
       })
-      .catch(err => console.error("Failed to fetch product categories:", err));
-
-    // Fetch Products
-    fetchCollection('/products', 'products')
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        }
-      })
-      .catch(err => console.error("Failed to fetch products:", err))
+      .catch(err => console.error("Failed to fetch products or categories:", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -161,14 +170,14 @@ function Products() {
                         >
                           <FaInfoCircle /> Details
                         </button>
-                         {product.brochure_path && (
+                         {(product.pdf_brochure_path || product.brochure_path) && (
                           <a 
-                            href={getAssetUrl(product.brochure_path, 'brochure')} 
+                            href={getAssetUrl(product.pdf_brochure_path || product.brochure_path, 'brochure')} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="product-btn-pdf" 
                             title="Download Brochure"
-                            style={{ padding: '10px 14px', fontSize: '13px', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ padding: '10px 14px', fontSize: '13px', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
                           >
                             <FaFilePdf />
                           </a>
@@ -290,18 +299,18 @@ function Products() {
                 <Link 
                   to={`/enquiry?tab=enquiry&product=${encodeURIComponent(selectedProduct.name)}`}
                   className="btn-primary" 
-                  style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
                   onClick={() => setSelectedProduct(null)}
                 >
                   <FaEnvelope /> Request Callback
                 </Link>
-                 {selectedProduct.brochure_path && (
+                 {(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path) && (
                   <a 
-                    href={getAssetUrl(selectedProduct.brochure_path, 'brochure')} 
+                    href={getAssetUrl(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path, 'brochure')} 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="btn-outline"
-                    style={{ borderColor: '#ef4444', color: '#ef4444', padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ borderColor: '#ef4444', color: '#ef4444', padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', borderRadius: '6px', fontWeight: '600' }}
                   >
                     <FaFilePdf /> Download Brochure
                   </a>

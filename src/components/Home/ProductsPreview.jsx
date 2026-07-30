@@ -40,18 +40,34 @@ function ProductsPreview() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCollection('/products', 'products')
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          // Prefer featured products first, then take up to 3
-          const sorted = [...data].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
-          setProducts(sorted.slice(0, 3));
-        } else {
-          setProducts(STATIC_FALLBACK);
-        }
-      })
-      .catch(() => setProducts(STATIC_FALLBACK))
-      .finally(() => setLoading(false));
+    let catList = [];
+    fetchCollection('/products/categories', 'product_categories')
+      .then(cats => { if (Array.isArray(cats)) catList = cats; })
+      .catch(() => {})
+      .finally(() => {
+        fetchCollection('/products', 'products')
+          .then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+              const enriched = data.map(p => {
+                const matchedCat = catList.find(c =>
+                  String(c.id) === String(p.category_id) ||
+                  c.name?.toLowerCase() === String(p.category_id).toLowerCase() ||
+                  c.slug?.toLowerCase() === String(p.category_id).toLowerCase()
+                );
+                return {
+                  ...p,
+                  category_name: p.category_name || (matchedCat ? matchedCat.name : 'General')
+                };
+              });
+              const sorted = [...enriched].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+              setProducts(sorted.slice(0, 3));
+            } else {
+              setProducts(STATIC_FALLBACK);
+            }
+          })
+          .catch(() => setProducts(STATIC_FALLBACK))
+          .finally(() => setLoading(false));
+      });
   }, []);
 
   // While loading, show static fallback immediately (no blank flash)

@@ -119,17 +119,17 @@ function ProductsTab({
               <div className="form-group">
                 <label>Brochure PDF</label>
                 {/* Show existing brochure info when editing */}
-                {editingProduct !== 'new' && productForm.brochure_path && (
+                {editingProduct !== 'new' && (productForm.pdf_brochure_path || productForm.brochure_path) && (
                   <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <FaFilePdf style={{ color: '#ef4444', fontSize: '24px', flexShrink: 0 }} />
                     <div>
                       <a
-                        href={getAssetUrl(productForm.brochure_path, 'brochure')}
+                        href={getAssetUrl(productForm.pdf_brochure_path || productForm.brochure_path, 'brochure')}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ fontSize: '12px', color: '#ef4444', textDecoration: 'underline', display: 'block' }}
                       >
-                        {productForm.brochure_path.split('/').pop()}
+                        {(productForm.pdf_brochure_path || productForm.brochure_path).split('/').pop()}
                       </a>
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>Select a new file to replace</span>
                     </div>

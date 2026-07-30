@@ -350,6 +350,8 @@ export default function useAdminState() {
       const cats = catData || [];
       const enriched = (prodData || []).map(p => ({
         ...p,
+        pdf_brochure_path: p.pdf_brochure_path || p.brochure_path || null,
+        brochure_path: p.pdf_brochure_path || p.brochure_path || null,
         category_name: p.category_name ||
           (cats.find(c => String(c.id) === String(p.category_id))?.name) ||
           (p.category_id ? String(p.category_id) : 'Uncategorized')

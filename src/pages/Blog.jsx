@@ -19,19 +19,32 @@ function Blog() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
-    // Fetch categories
+    let catList = [];
     fetchCollection('/blogs/categories', 'blog_categories')
-      .then(data => {
-        if (Array.isArray(data)) setCategories(data);
+      .then(catData => {
+        if (Array.isArray(catData)) {
+          catList = catData;
+          setCategories(catData);
+        }
+        return fetchCollection('/blogs', 'blogs');
       })
-      .catch(err => console.error("Error loading categories:", err));
-
-    // Fetch blogs
-    fetchCollection('/blogs', 'blogs')
-      .then(data => {
-        if (Array.isArray(data)) setBlogs(data);
+      .then(blogData => {
+        if (Array.isArray(blogData)) {
+          const enriched = blogData.map(b => {
+            const matchedCat = catList.find(c =>
+              String(c.id) === String(b.category_id) ||
+              c.name?.toLowerCase() === String(b.category_id).toLowerCase() ||
+              c.slug?.toLowerCase() === String(b.category_id).toLowerCase()
+            );
+            return {
+              ...b,
+              category_name: b.category_name || (matchedCat ? matchedCat.name : (b.category_id ? String(b.category_id) : 'General'))
+            };
+          });
+          setBlogs(enriched);
+        }
       })
-      .catch(err => console.error("Error loading blogs:", err))
+      .catch(err => console.error("Error loading blogs or categories:", err))
       .finally(() => setLoading(false));
   }, []);
 
