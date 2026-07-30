@@ -1238,7 +1238,6 @@ export default function useAdminState() {
     // --- Step 4: Build exact Supabase payload ---
     const supabasePayload = {
       category_id: validCatId,
-      category_name: categoryName,
       name: productForm.name,
       slug: productForm.slug || productForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description: productForm.description || '',
@@ -1711,7 +1710,6 @@ export default function useAdminState() {
     try {
       const payload = {
         category_id: validCatId,
-        category_name: catName,
         title: blogForm.title,
         slug: blogForm.slug || blogForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         excerpt: blogForm.excerpt || '',
