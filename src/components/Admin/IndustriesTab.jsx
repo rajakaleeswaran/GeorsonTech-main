@@ -32,11 +32,34 @@ function IndustriesTab({
           <h3>{editingIndustry === 'new' ? 'New Industry' : 'Edit Industry'}</h3>
           <div className="form-group">
             <label>Industry Name</label>
-            <input type="text" className="form-input" required value={industryForm.name} onChange={e => setIndustryForm(prev => ({ ...prev, name: e.target.value }))} />
+            <input 
+              type="text" 
+              className="form-input" 
+              required 
+              value={industryForm.name} 
+              onChange={e => {
+                const nameVal = e.target.value;
+                const autoSlug = nameVal.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                setIndustryForm(prev => ({
+                  ...prev,
+                  name: nameVal,
+                  slug: editingIndustry === 'new' || !prev.slug ? autoSlug : prev.slug
+                }));
+              }} 
+            />
           </div>
           <div className="form-group">
             <label>Slug (URL pathway)</label>
-            <input type="text" className="form-input" required value={industryForm.slug} onChange={e => setIndustryForm(prev => ({ ...prev, slug: e.target.value }))} />
+            <input 
+              type="text" 
+              className="form-input" 
+              required 
+              value={industryForm.slug || ''} 
+              onChange={e => {
+                const slugVal = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                setIndustryForm(prev => ({ ...prev, slug: slugVal }));
+              }} 
+            />
           </div>
           <div className="form-group">
             <label>Short Summary</label>
@@ -48,7 +71,7 @@ function IndustriesTab({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="form-group">
-              <label>Display Order</label>
+              <label>Display Order (Lower values display first)</label>
               <input type="number" className="form-input" value={industryForm.sort_order} onChange={e => setIndustryForm(prev => ({ ...prev, sort_order: e.target.value }))} />
             </div>
             <div className="form-group">
@@ -106,33 +129,38 @@ function IndustriesTab({
               </tr>
             </thead>
             <tbody>
-              {industries.map(ind => (
-                <tr key={ind.id}>
-                  <td>
-                    <img
-                      src={ind.image_path ? getAssetUrl(ind.image_path) : ''}
-                      alt=""
-                      style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
-                      onError={e => { e.target.style.opacity = '0'; }}
-                    />
-                  </td>
-                  <td>{ind.name}</td>
-                  <td><span className={`badge ${ind.status === 'Publish' ? 'publish' : 'draft'}`}>{ind.status}</span></td>
-                  <td>{ind.sort_order}</td>
-                  <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => {
-                      setEditingIndustry(ind);
-                      setIndustryForm(ind);
-                      setIndustryImage(null);
-                    }}>
-                      <FaEdit /> Edit
-                    </button>
-                    <button className="admin-action-btn admin-btn-delete" onClick={() => deleteIndustryItem(ind.id)}>
-                      <FaTrash /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {[...industries]
+                .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
+                .map(ind => (
+                  <tr key={ind.id}>
+                    <td>
+                      <img
+                        src={ind.image_path ? getAssetUrl(ind.image_path) : ''}
+                        alt=""
+                        style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                        onError={e => { e.target.style.opacity = '0'; }}
+                      />
+                    </td>
+                    <td>{ind.name}</td>
+                    <td><span className={`badge ${ind.status === 'Publish' ? 'publish' : 'draft'}`}>{ind.status}</span></td>
+                    <td>{ind.sort_order}</td>
+                    <td>
+                      <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                        setEditingIndustry(ind);
+                        setIndustryForm({
+                          ...ind,
+                          slug: ind.slug || ind.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+                        });
+                        setIndustryImage(null);
+                      }}>
+                        <FaEdit /> Edit
+                      </button>
+                      <button className="admin-action-btn admin-btn-delete" onClick={() => deleteIndustryItem(ind.id)}>
+                        <FaTrash /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

@@ -405,9 +405,10 @@ export default function useAdminState() {
       ...i,
       image_path: i.image_path || null
     }));
-    setIndustries(enriched);
-    try { localStorage.setItem('cms_cache_industries', JSON.stringify(enriched)); } catch (_) {}
-  });
+    const sorted = [...enriched].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+    setIndustries(sorted);
+    try { localStorage.setItem('cms_cache_industries', JSON.stringify(sorted)); } catch (_) {}
+  }, 'sort_order');
 
   // Fetch clients & brand logos
   const fetchClients = () => fetchWithFallback('/clients', 'clients', (data) => {
