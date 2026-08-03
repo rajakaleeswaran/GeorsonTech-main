@@ -59,8 +59,12 @@ function ProductsPreview() {
                   category_name: p.category_name || (matchedCat ? matchedCat.name : 'General')
                 };
               });
-              const sorted = [...enriched].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
-              setProducts(sorted.slice(0, 3));
+              const featuredOnly = enriched.filter(p => p.is_featured === true || p.is_featured === 'true' || p.is_featured === 1 || p.is_featured === '1');
+              if (featuredOnly.length > 0) {
+                setProducts(featuredOnly.slice(0, 3));
+              } else {
+                setProducts(STATIC_FALLBACK);
+              }
             } else {
               setProducts(STATIC_FALLBACK);
             }
