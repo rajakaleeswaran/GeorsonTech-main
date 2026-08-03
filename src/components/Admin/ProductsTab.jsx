@@ -1,6 +1,6 @@
-import { getAssetUrl } from '../../lib/api';
+import { getAssetUrl, getYouTubeEmbedUrl } from '../../lib/api';
 import React from 'react';
-import { FaPlus, FaEdit, FaTrash, FaImage, FaFilePdf } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage, FaFilePdf, FaYoutube } from 'react-icons/fa';
 
 function ProductsTab({
   activeTab,
@@ -103,7 +103,29 @@ function ProductsTab({
 
             <div className="form-group">
               <label>YouTube Video Link</label>
-              <input type="text" className="form-input" placeholder="https://youtube.com/..." value={productForm.video_url || ''} onChange={e => setProductForm(prev => ({ ...prev, video_url: e.target.value }))} />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+                value={productForm.video_url || ''}
+                onChange={e => setProductForm(prev => ({ ...prev, video_url: e.target.value }))}
+              />
+              {getYouTubeEmbedUrl(productForm.video_url) && (
+                <div style={{ marginTop: '10px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '6px', fontWeight: '600' }}>
+                    🎥 Live Video Preview:
+                  </span>
+                  <div style={{ position: 'relative', width: '100%', maxWidth: '380px', paddingBottom: '56.25%', height: 0, borderRadius: '8px', overflow: 'hidden', background: '#000', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    <iframe
+                      src={getYouTubeEmbedUrl(productForm.video_url)}
+                      title="YouTube Preview"
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -186,6 +208,7 @@ function ProductsTab({
                   <th>Category</th>
                   <th>Featured</th>
                   <th>Brochure</th>
+                  <th>Video</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -209,9 +232,21 @@ function ProductsTab({
                           href={getAssetUrl(p.pdf_brochure_path || p.brochure_path, 'brochure')}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          style={{ color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}
                         >
                           <FaFilePdf /> View PDF
+                        </a>
+                      ) : <span style={{ color: '#94a3b8' }}>None</span>}
+                    </td>
+                    <td>
+                      {p.video_url && getYouTubeEmbedUrl(p.video_url) ? (
+                        <a
+                          href={p.video_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#ff0000', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}
+                        >
+                          <FaYoutube /> Watch Video
                         </a>
                       ) : <span style={{ color: '#94a3b8' }}>None</span>}
                     </td>

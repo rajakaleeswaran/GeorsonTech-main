@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { FaSearch, FaFilePdf, FaInfoCircle, FaTimes, FaEnvelope } from 'react-icons/fa';
+import { FaSearch, FaFilePdf, FaInfoCircle, FaTimes, FaEnvelope, FaYoutube, FaPlay } from 'react-icons/fa';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import '../styles/Products.css';
-import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
+import { fetchCollection, getAssetUrl, getYouTubeEmbedUrl } from '../lib/dbHelper';
 
 function Products() {
   const { slug } = useParams();
@@ -167,6 +167,8 @@ function Products() {
                   ? getAssetUrl(product.pdf_brochure_path || product.brochure_path, 'brochure')
                   : null;
 
+                const videoEmbedUrl = getYouTubeEmbedUrl(product.video_url);
+
                 return (
                   <div key={product.id} className="product-card">
                     <div className="product-card-img" style={{ position: 'relative', height: '220px', background: '#e2e8f0', overflow: 'hidden' }}>
@@ -179,6 +181,17 @@ function Products() {
                       <span className="product-card-badge" style={{ position: 'absolute', top: '12px', left: '12px', background: '#0093DD', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
                         {product.category_name || "General"}
                       </span>
+                      {videoEmbedUrl && (
+                        <div 
+                          onClick={() => openProductDetails(product)}
+                          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          title="Click to watch product video"
+                        >
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ff0000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,0,0,0.4)', paddingLeft: '3px' }}>
+                            <FaPlay style={{ fontSize: '16px' }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="product-card-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: 'calc(100% - 220px)' }}>
                       <h3 style={{ fontSize: '17.5px', fontWeight: '700', color: '#0f172a', margin: '0 0 10px' }}>{product.name}</h3>
@@ -192,14 +205,23 @@ function Products() {
                         </div>
                       )}
 
-                      <div className="product-card-actions" style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                      <div className="product-card-actions" style={{ display: 'flex', gap: '10px', marginTop: 'auto', flexWrap: 'wrap' }}>
                         <button 
                           className="product-btn-details" 
                           onClick={() => openProductDetails(product)}
-                          style={{ flex: 1, padding: '10px', fontSize: '13px', background: '#0093DD', color: '#fff', border: 'none', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600' }}
+                          style={{ flex: 1, minWidth: '90px', padding: '10px', fontSize: '13px', background: '#0093DD', color: '#fff', border: 'none', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600' }}
                         >
                           <FaInfoCircle /> Details
                         </button>
+                        {videoEmbedUrl && (
+                          <button
+                            onClick={() => openProductDetails(product)}
+                            style={{ padding: '10px 12px', fontSize: '13px', background: '#ff0000', color: '#ffffff', border: 'none', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600' }}
+                            title="Watch Product Video"
+                          >
+                            <FaYoutube /> Video
+                          </button>
+                        )}
                         {brochureUrl && (
                           <a 
                             href={brochureUrl} 
@@ -232,6 +254,8 @@ function Products() {
         const modalBrochureUrl = (selectedProduct.pdf_brochure_path || selectedProduct.brochure_path)
           ? getAssetUrl(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path, 'brochure')
           : null;
+        
+        const modalVideoEmbedUrl = getYouTubeEmbedUrl(selectedProduct.video_url);
 
         return (
           <div style={{
@@ -298,6 +322,24 @@ function Products() {
                 <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: 1.6, marginBottom: '24px' }}>
                   {selectedProduct.description}
                 </p>
+
+                {/* Embedded YouTube Video Player */}
+                {modalVideoEmbedUrl && (
+                  <div style={{ marginBottom: '24px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaYoutube style={{ color: '#ff0000', fontSize: '20px' }} /> Product Demonstration Video:
+                    </h4>
+                    <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', background: '#0f172a', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                      <iframe
+                        src={modalVideoEmbedUrl}
+                        title={`${selectedProduct.name} Video`}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Technical Specifications */}
                 {selectedProduct.specifications && (() => {

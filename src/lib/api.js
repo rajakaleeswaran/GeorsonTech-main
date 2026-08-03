@@ -59,4 +59,25 @@ export function getAssetUrl(path, type = 'general') {
   return `${UPLOADS_BASE_URL}/${cleanPath}`;
 }
 
+/**
+ * Converts any standard YouTube URL (watch, youtu.be, shorts, embed) into an embeddable YouTube URL.
+ * @param {string} url
+ * @returns {string|null}
+ */
+export function getYouTubeEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  const cleanUrl = url.trim();
+
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
+  const match = cleanUrl.match(regExp);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+
+  if (cleanUrl.includes('youtube.com/embed/')) {
+    return cleanUrl;
+  }
+  return null;
+}
+
 

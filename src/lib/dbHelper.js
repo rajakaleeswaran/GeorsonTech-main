@@ -4,9 +4,9 @@
  * Checks if local backend is active; if down (e.g. live on Vercel), fallback queries Supabase.
  */
 import { supabase } from './supabase';
-import { API_BASE_URL as API_BASE, getAssetUrl } from './api';
+import { API_BASE_URL as API_BASE, getAssetUrl, getYouTubeEmbedUrl } from './api';
 
-export { getAssetUrl };
+export { getAssetUrl, getYouTubeEmbedUrl };
 
 
 const FALLBACK_DATA = {
