@@ -17,56 +17,56 @@ function BlogPost() {
     let isMounted = true;
 
     const fetchPostDetails = async () => {
-      // 1. Attempt local backend fetch
+      let matchedPost = null;
+      let allBlogList = [];
+
+      // 1. Try local CMS cache first (saved by Admin)
       try {
-        const res = await fetch(`${API_BASE_URL}/blogs/${slug}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) setPost(data);
-          
-          try {
-            const allBlogsRes = await fetch(`${API_BASE_URL}/blogs`);
-            if (allBlogsRes.ok) {
-              const allBlogs = await allBlogsRes.json();
-              if (Array.isArray(allBlogs) && isMounted) {
-                const matches = allBlogs.filter(b => b.slug !== slug && b.category_name === data.category_name);
-                setRelated(matches.slice(0, 2));
-              }
-            }
-          } catch (_e) {
-            // Ignored related fetch error
+        const cachedStr = localStorage.getItem('cms_cache_blogs');
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (Array.isArray(cached) && cached.length > 0) {
+            allBlogList = cached;
+            matchedPost = cached.find(b => 
+              b.slug === slug || 
+              String(b.id) === String(slug) ||
+              (b.title && b.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') === slug)
+            );
           }
-          if (isMounted) setLoading(false);
-          return;
         }
-      } catch (_err) {
-        console.warn("Local backend down. Querying Supabase for blog details.");
+      } catch (_) {}
+
+      // 2. Attempt local backend fetch
+      if (!matchedPost) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/blogs/${slug}`);
+          if (res.ok) {
+            matchedPost = await res.json();
+          }
+        } catch (_err) {}
       }
 
+      // 3. Supabase Fallback
+      if (!matchedPost) {
+        try {
+          const { data: postData } = await supabase
+            .from('blogs')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
 
-      // 2. Supabase Fallback
-      const { data: postData, error } = await supabase
-        .from('blogs')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+          if (postData) matchedPost = postData;
+        } catch (_) {}
+      }
 
-      if (!error && postData) {
-        setPost(postData);
-
-        // Fetch related posts
-        const { data: allBlogs, error: listError } = await supabase
-          .from('blogs')
-          .select('*');
-
-        if (!listError && allBlogs) {
-          const matches = allBlogs.filter(b => b.slug !== slug && b.category_id === postData.category_id);
+      if (isMounted) {
+        setPost(matchedPost || null);
+        if (matchedPost && allBlogList.length > 0) {
+          const matches = allBlogList.filter(b => b.slug !== slug && (b.category_name === matchedPost.category_name || b.category_id === matchedPost.category_id));
           setRelated(matches.slice(0, 2));
         }
-      } else {
-        setPost(null);
+        setLoading(false);
       }
-      if (isMounted) setLoading(false);
     };
 
     fetchPostDetails();

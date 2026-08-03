@@ -20,21 +20,52 @@ function Blog() {
 
   useEffect(() => {
     let catList = [];
+
+    // 1. Try local CMS cache first (saved by Admin)
+    try {
+      const cachedCats = localStorage.getItem('cms_cache_blog_categories');
+      if (cachedCats) {
+        const parsedCats = JSON.parse(cachedCats);
+        if (Array.isArray(parsedCats) && parsedCats.length > 0) {
+          catList = parsedCats;
+          setCategories(parsedCats);
+        }
+      }
+      const cachedBlogs = localStorage.getItem('cms_cache_blogs');
+      if (cachedBlogs) {
+        const parsedBlogs = JSON.parse(cachedBlogs);
+        if (Array.isArray(parsedBlogs) && parsedBlogs.length > 0) {
+          const enriched = parsedBlogs.map(b => {
+            const matchedCat = catList.find(c =>
+              String(c.id) === String(b.category_id) ||
+              c.name?.toLowerCase() === String(b.category_name || b.category_id).toLowerCase()
+            );
+            return {
+              ...b,
+              category_name: b.category_name || (matchedCat ? matchedCat.name : (b.category_id ? String(b.category_id) : 'General'))
+            };
+          });
+          setBlogs(enriched);
+          setLoading(false);
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from DB/API
     fetchCollection('/blogs/categories', 'blog_categories')
       .then(catData => {
-        if (Array.isArray(catData)) {
+        if (Array.isArray(catData) && catData.length > 0) {
           catList = catData;
           setCategories(catData);
         }
         return fetchCollection('/blogs', 'blogs');
       })
       .then(blogData => {
-        if (Array.isArray(blogData)) {
+        if (Array.isArray(blogData) && blogData.length > 0) {
           const enriched = blogData.map(b => {
             const matchedCat = catList.find(c =>
               String(c.id) === String(b.category_id) ||
-              c.name?.toLowerCase() === String(b.category_id).toLowerCase() ||
-              c.slug?.toLowerCase() === String(b.category_id).toLowerCase()
+              c.name?.toLowerCase() === String(b.category_name || b.category_id).toLowerCase()
             );
             return {
               ...b,
@@ -51,7 +82,9 @@ function Blog() {
   // Filter logic — only show Published blogs
   const filteredBlogs = blogs.filter(blog => {
     if (blog.status && blog.status !== 'Publish') return false;
-    const matchCat = !activeCategory || blog.category_name === activeCategory;
+    const bCat = (blog.category_name || '').toLowerCase();
+    const aCat = (activeCategory || '').toLowerCase();
+    const matchCat = !activeCategory || bCat === aCat || bCat.includes(aCat) || aCat.includes(bCat);
     const titleLower = (blog.title || '').toLowerCase();
     const excerptLower = (blog.excerpt || '').toLowerCase();
     const contentLower = (blog.content || '').toLowerCase();
@@ -61,7 +94,7 @@ function Blog() {
     return matchCat && matchSearch;
   });
 
-  // Extract featured (the newest one, which is index 0 in the list if sorted DESC)
+  // Extract featured (the newest one)
   const featured = filteredBlogs.length > 0 ? filteredBlogs[0] : null;
   const olderArticles = filteredBlogs.length > 1 ? filteredBlogs.slice(1) : [];
 
@@ -250,7 +283,12 @@ function Blog() {
                     >
                       {cat.name}
                       <span style={{ fontSize: '11px', background: '#e2e8f0', padding: '2px 6px', borderRadius: '10px', color: '#475569' }}>
-                        {blogs.filter(b => b.category_name === cat.name && (!b.status || b.status === 'Publish')).length}
+                        {blogs.filter(b => {
+                          if (b.status && b.status !== 'Publish') return false;
+                          const bCat = (b.category_name || '').toLowerCase();
+                          const cCat = (cat.name || '').toLowerCase();
+                          return bCat === cCat || bCat.includes(cCat) || cCat.includes(bCat);
+                        }).length}
                       </span>
                     </button>
                   </li>

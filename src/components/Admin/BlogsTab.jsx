@@ -17,11 +17,32 @@ function BlogsTab({
 
   const handleTitleChange = (val) => {
     setBlogForm(prev => {
-      // Only auto-generate slug if slug is still empty
-      const newSlug = !prev.slug ? val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : prev.slug;
-      return { ...prev, title: val, slug: newSlug };
+      const autoSlug = val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return {
+        ...prev,
+        title: val,
+        slug: editingBlog === 'new' || !prev.slug ? autoSlug : prev.slug
+      };
     });
   };
+
+  const handleSlugChange = (val) => {
+    const cleanSlug = val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    setBlogForm(prev => ({ ...prev, slug: cleanSlug }));
+  };
+
+  // Determine current dropdown value
+  const selectedCatValue = React.useMemo(() => {
+    if (blogForm.category_id) {
+      const matched = blogCategories.find(c => String(c.id) === String(blogForm.category_id) || c.name === blogForm.category_id);
+      if (matched) return String(matched.id || matched.name);
+    }
+    if (blogForm.category_name) {
+      const matched = blogCategories.find(c => c.name === blogForm.category_name);
+      if (matched) return String(matched.id || matched.name);
+    }
+    return blogCategories[0] ? String(blogCategories[0].id || blogCategories[0].name) : '';
+  }, [blogForm.category_id, blogForm.category_name, blogCategories]);
 
   return (
     <div>
@@ -31,9 +52,10 @@ function BlogsTab({
           <button className="btn-primary" onClick={() => {
             setEditingBlog('new');
             setCustomCat(false);
+            const firstCat = blogCategories[0];
             setBlogForm({
-              category_id: String(blogCategories[0]?.id || ''),
-              category_name: blogCategories[0]?.name || '',
+              category_id: String(firstCat?.id || ''),
+              category_name: firstCat?.name || '',
               title: '', slug: '', excerpt: '', content: '',
               status: 'Publish', seo_title: '', meta_description: '', seo_keywords: ''
             });
@@ -55,17 +77,17 @@ function BlogsTab({
                 <select
                   className="form-select"
                   required
-                  value={String(blogForm.category_id || '')}
+                  value={selectedCatValue}
                   onChange={e => {
                     const selectedVal = e.target.value;
                     if (selectedVal === 'ADD_NEW') {
                       setCustomCat(true);
                       setBlogForm(prev => ({ ...prev, category_id: '', category_name: '' }));
                     } else {
-                      const matched = blogCategories.find(c => String(c.id) === String(selectedVal));
+                      const matched = blogCategories.find(c => String(c.id) === String(selectedVal) || c.name === selectedVal);
                       setBlogForm(prev => ({
                         ...prev,
-                        category_id: selectedVal,
+                        category_id: matched ? (matched.id || matched.name) : selectedVal,
                         category_name: matched ? matched.name : selectedVal
                       }));
                     }
@@ -100,7 +122,7 @@ function BlogsTab({
 
           <div className="form-group">
             <label>Slug (Unique URL)</label>
-            <input type="text" className="form-input" required value={blogForm.slug} onChange={e => setBlogForm(prev => ({ ...prev, slug: e.target.value }))} />
+            <input type="text" className="form-input" required value={blogForm.slug || ''} onChange={e => handleSlugChange(e.target.value)} />
           </div>
 
           <div className="form-group">

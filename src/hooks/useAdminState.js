@@ -61,8 +61,32 @@ const INITIAL_INDUSTRIES = [
 ];
 
 const INITIAL_BLOGS = [
-  { id: 1, title: "Upgrading Legacy Industrial Plants into Industry 4.0 Frameworks", category_name: "Automation", excerpt: "Discover step-by-step strategies for equipping conventional factory machinery with IoT edge gateways and cloud telemetry dashboards.", status: "Publish" },
-  { id: 2, title: "Key Safety Factors in Custom PCC & MCC Panel Engineering", category_name: "Electrical", excerpt: "Understanding CPRI testing, thermal insulation, busbar sizing, and CEIG approval requirements for electrical panels.", status: "Publish" }
+  {
+    id: 1,
+    title: "Upgrading Legacy Industrial Plants into Industry 4.0 Frameworks",
+    slug: "industry-4-0-upgrade",
+    category_id: 1,
+    category_name: "Automation",
+    excerpt: "Discover step-by-step strategies for equipping conventional factory machinery with IoT edge gateways and cloud telemetry dashboards.",
+    content: "<p>Industrial facilities running legacy relays, PLCs, and standalone instrumentation can achieve digital transformation without complete hardware replacement. By overlaying Industry 4.0 edge gateways, OPC-UA protocols, and cloud telemetry, plant managers gain real-time visibility into machine downtime, overall equipment effectiveness (OEE), and energy consumption metrics.</p><h3>Key Transformation Milestones:</h3><ul><li><strong>Protocol Mapping:</strong> Convert legacy Modbus RTU/ASCII signals into lightweight MQTT JSON payloads.</li><li><strong>Edge Compute:</strong> Deploy edge controllers for local data buffering during network latency spikes.</li><li><strong>Cloud Telemetry:</strong> Render live SCADA analytics and predictive vibration alerts on mobile dashboards.</li></ul>",
+    status: "Publish",
+    featured_image: "uploads/images/hero2.png",
+    image_path: "uploads/images/hero2.png",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    title: "Key Safety Factors in Custom PCC & MCC Panel Engineering",
+    slug: "panel-engineering-safety",
+    category_id: 2,
+    category_name: "Electrical",
+    excerpt: "Understanding CPRI testing, thermal insulation, busbar sizing, and CEIG approval requirements for electrical panels.",
+    content: "<p>Engineering power distribution and motor control centers requires rigorous safety compliance, IP rating certification, and thermal dissipation modeling. Electrical panels must withstand short-circuit stress, prevent arcing faults, and maintain busbar integrity under peak load conditions.</p><h3>Critical Design Specifications:</h3><ul><li><strong>Ingress Protection:</strong> Double-gasketed IP54 and IP65 enclosures for dusty or humid factory environments.</li><li><strong>Busbar Sizing:</strong> Electrolytic grade E91E copper busbars with heat-shrinkable insulation sleeves.</li><li><strong>CPRI Certification:</strong> Short-circuit withstand testing up to 50kA for 1 second.</li></ul>",
+    status: "Publish",
+    featured_image: "uploads/images/hero1.png",
+    image_path: "uploads/images/hero1.png",
+    created_at: new Date().toISOString()
+  }
 ];
 
 const INITIAL_BLOG_CATEGORIES = [
