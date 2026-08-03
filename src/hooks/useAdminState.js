@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../lib/api';
 
 
 const INITIAL_CLIENTS = [
+  // Prestigious Clients
   { id: 1, name: "ABB", category: "Client", status: "Publish", logo_path: "uploads/images/ABB.png" },
   { id: 2, name: "AIRTRONIC", category: "Client", status: "Publish", logo_path: "uploads/images/AIRTRONIC.jpeg" },
   { id: 3, name: "BARGA", category: "Client", status: "Publish", logo_path: "uploads/images/BARGA.jpeg" },
@@ -22,7 +23,14 @@ const INITIAL_CLIENTS = [
   { id: 8, name: "MARCUS", category: "Client", status: "Publish", logo_path: "uploads/images/MARCUS.jpeg" },
   { id: 9, name: "NORBAR", category: "Client", status: "Publish", logo_path: "uploads/images/NORBAR.png" },
   { id: 10, name: "RADIANT", category: "Client", status: "Publish", logo_path: "uploads/images/RADIANT.png" },
-  { id: 11, name: "RAMCO", category: "Client", status: "Publish", logo_path: "uploads/images/RAMCO.jpeg" }
+  { id: 11, name: "RAMCO", category: "Client", status: "Publish", logo_path: "uploads/images/RAMCO.jpeg" },
+
+  // Global Brands
+  { id: 101, name: "Phoenix Contact", category: "Brand", status: "Publish", logo_path: "uploads/images/phoenix.png" },
+  { id: 102, name: "Polycab", category: "Brand", status: "Publish", logo_path: "uploads/images/polycab.png" },
+  { id: 103, name: "Powermat", category: "Brand", status: "Publish", logo_path: "uploads/images/powermat.png" },
+  { id: 104, name: "Rittal", category: "Brand", status: "Publish", logo_path: "uploads/images/rittal.png" },
+  { id: 105, name: "Schneider Electric", category: "Brand", status: "Publish", logo_path: "uploads/images/schneider.png" }
 ];
 
 const INITIAL_SERVICES = [
@@ -1672,7 +1680,11 @@ export default function useAdminState() {
         }
       } catch (_) {}
 
-      setClients(prev => prev.filter(c => c.id !== id));
+      setClients(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        try { localStorage.setItem('cms_cache_clients', JSON.stringify(updated)); } catch (_) {}
+        return updated;
+      });
       toast.info("Client deleted locally");
     }
   };

@@ -19,11 +19,29 @@ function DealWithBrand() {
   const [dbBrands, setDbBrands] = useState([]);
 
   useEffect(() => {
+    // 1. Check local cache first (saved by Admin)
+    try {
+      const cachedStr = localStorage.getItem('cms_cache_clients');
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (Array.isArray(cached)) {
+          const brands = cached.filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand');
+          if (brands.length > 0) {
+            setDbBrands(brands);
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from DB/API
     fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter(c => c.status === 'Publish' && c.category === 'Brand');
-          setDbBrands(filtered);
+          const filtered = data.filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand');
+          if (filtered.length > 0) {
+            setDbBrands(filtered);
+          }
         }
       })
       .catch(err => console.error("Failed to load slider brands:", err));

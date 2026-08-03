@@ -52,10 +52,26 @@ function ClientsBody() {
   const [clients, setClients] = useState(FALLBACK_CLIENTS);
 
   useEffect(() => {
+    // 1. Check local cache first (saved by Admin)
+    try {
+      const cachedStr = localStorage.getItem('cms_cache_clients');
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (Array.isArray(cached) && cached.length > 0) {
+          const filtered = cached.filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category));
+          if (filtered.length > 0) {
+            setClients(filtered);
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from DB/API
     fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter(c => c.category === 'Client' || !c.category);
+          const filtered = data.filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category));
           if (filtered.length > 0) {
             setClients(filtered);
           }
