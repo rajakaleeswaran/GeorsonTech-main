@@ -35,12 +35,35 @@ function ServicesTab({
           
           <div className="form-group">
             <label>Service Title</label>
-            <input type="text" className="form-input" required value={serviceForm.title} onChange={e => setServiceForm(prev => ({ ...prev, title: e.target.value }))} />
+            <input 
+              type="text" 
+              className="form-input" 
+              required 
+              value={serviceForm.title} 
+              onChange={e => {
+                const titleVal = e.target.value;
+                const autoSlug = titleVal.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                setServiceForm(prev => ({
+                  ...prev,
+                  title: titleVal,
+                  slug: editingService === 'new' || !prev.slug ? autoSlug : prev.slug
+                }));
+              }} 
+            />
           </div>
 
           <div className="form-group">
-            <label>Slug (Unique identifier)</label>
-            <input type="text" className="form-input" required value={serviceForm.slug} onChange={e => setServiceForm(prev => ({ ...prev, slug: e.target.value }))} />
+            <label>Slug (Unique URL identifier)</label>
+            <input 
+              type="text" 
+              className="form-input" 
+              required 
+              value={serviceForm.slug || ''} 
+              onChange={e => {
+                const slugVal = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                setServiceForm(prev => ({ ...prev, slug: slugVal }));
+              }} 
+            />
           </div>
 
           <div className="form-group">
@@ -99,17 +122,17 @@ function ServicesTab({
             <div className="form-group">
               <label>PDF Brochure Document</label>
               {/* Show current brochure info when editing */}
-              {editingService !== 'new' && serviceForm.brochure_path && (
+              {editingService !== 'new' && (serviceForm.pdf_brochure_path || serviceForm.brochure_path) && (
                 <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '18px', color: '#ef4444', flexShrink: 0 }}>📄</span>
                   <div>
                     <a
-                      href={getAssetUrl(serviceForm.brochure_path, 'brochure')}
+                      href={getAssetUrl(serviceForm.pdf_brochure_path || serviceForm.brochure_path, 'brochure')}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ fontSize: '12px', color: '#ef4444', textDecoration: 'underline', display: 'block' }}
                     >
-                      {serviceForm.brochure_path.split('/').pop()}
+                      {(serviceForm.pdf_brochure_path || serviceForm.brochure_path).split('/').pop()}
                     </a>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>Select a new file to replace</span>
                   </div>
@@ -142,48 +165,58 @@ function ServicesTab({
               </tr>
             </thead>
             <tbody>
-              {services.map(svc => (
-                <tr key={svc.id}>
-                  <td>
-                    <img
-                      src={svc.image_path ? getAssetUrl(svc.image_path) : ''}
-                      alt=""
-                      style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
-                      onError={e => { e.target.style.opacity = '0'; }}
-                    />
-                  </td>
-                  <td>{svc.title}</td>
-                  <td><span className={`badge ${svc.status === 'Publish' ? 'publish' : 'draft'}`}>{svc.status}</span></td>
-                  <td>{svc.sort_order}</td>
-                  <td>
-                    {svc.brochure_path ? (
-                      <a
-                        href={getAssetUrl(svc.brochure_path, 'brochure')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#ef4444', fontSize: '13px' }}
-                      >
-                        📄 PDF
-                      </a>
-                    ) : (
-                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
-                    )}
-                  </td>
-                  <td>
-                    <button className="admin-action-btn admin-btn-edit" onClick={() => {
-                      setEditingService(svc);
-                      setServiceForm(svc);
-                      setServiceImage(null);
-                      setServiceBrochure(null);
-                    }}>
-                      <FaEdit /> Edit
-                    </button>
-                    <button className="admin-action-btn admin-btn-delete" onClick={() => deleteServiceItem(svc.id)}>
-                      <FaTrash /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {[...services]
+                .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
+                .map(svc => {
+                  const bPath = svc.pdf_brochure_path || svc.brochure_path;
+                  return (
+                    <tr key={svc.id}>
+                      <td>
+                        <img
+                          src={svc.image_path ? getAssetUrl(svc.image_path) : ''}
+                          alt=""
+                          style={{ width: '50px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: '#f1f5f9' }}
+                          onError={e => { e.target.style.opacity = '0'; }}
+                        />
+                      </td>
+                      <td>{svc.title}</td>
+                      <td><span className={`badge ${svc.status === 'Publish' ? 'publish' : 'draft'}`}>{svc.status}</span></td>
+                      <td>{svc.sort_order}</td>
+                      <td>
+                        {bPath ? (
+                          <a
+                            href={getAssetUrl(bPath, 'brochure')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#ef4444', fontSize: '13px', fontWeight: '600' }}
+                          >
+                            📄 PDF
+                          </a>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        <button className="admin-action-btn admin-btn-edit" onClick={() => {
+                          setEditingService(svc);
+                          setServiceForm({
+                            ...svc,
+                            slug: svc.slug || svc.title?.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
+                            pdf_brochure_path: bPath,
+                            brochure_path: bPath
+                          });
+                          setServiceImage(null);
+                          setServiceBrochure(null);
+                        }}>
+                          <FaEdit /> Edit
+                        </button>
+                        <button className="admin-action-btn admin-btn-delete" onClick={() => deleteServiceItem(svc.id)}>
+                          <FaTrash /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
