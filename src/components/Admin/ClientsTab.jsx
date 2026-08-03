@@ -67,7 +67,7 @@ function ClientsTab({
         {!editingClient && (
           <button className="btn-primary" onClick={() => {
             setEditingClient('new');
-            setClientForm({ name: '', sort_order: 0, status: 'Publish', category: 'Client' });
+            setClientForm({ name: '', sort_order: (clients.length + 1) * 10, status: 'Publish', category: 'Client' });
             setClientLogo(null);
           }}>
             <FaPlus /> Add Logo

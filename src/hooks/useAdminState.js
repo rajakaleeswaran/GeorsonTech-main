@@ -232,19 +232,27 @@ export default function useAdminState() {
    * @param {string} [orderBy]   - Supabase order column (default 'created_at')
    */
   const fetchWithFallback = async (endpoint, supaTable, setter, orderBy = 'created_at') => {
+    let localCache = [];
+    try {
+      const cached = localStorage.getItem(`cms_cache_${supaTable}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) localCache = parsed;
+      }
+    } catch (_) {}
+
     // 1. Try local Express backend
     try {
       const res = await fetch(`${API_BASE_URL}${endpoint}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setter(data);
-          try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
-          return;
-        }
-        if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0) {
-          setter(data);
-          try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
+          const map = new Map();
+          data.forEach(i => map.set(String(i.id), i));
+          localCache.forEach(i => map.set(String(i.id), i));
+          const merged = Array.from(map.values());
+          setter(merged);
+          try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(merged)); } catch (_) {}
           return;
         }
       }
@@ -252,32 +260,27 @@ export default function useAdminState() {
 
     // 2. Try Supabase cloud DB
     try {
+      const isSortOrder = orderBy === 'sort_order';
       const { data, error } = await supabase
         .from(supaTable)
         .select('*')
-        .order(orderBy, { ascending: false });
+        .order(orderBy, { ascending: isSortOrder ? true : false });
       if (!error && Array.isArray(data) && data.length > 0) {
-        setter(data);
-        try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(data)); } catch (_) {}
+        const map = new Map();
+        data.forEach(i => map.set(String(i.id), i));
+        localCache.forEach(i => map.set(String(i.id), i));
+        const merged = Array.from(map.values());
+        setter(merged);
+        try { localStorage.setItem(`cms_cache_${supaTable}`, JSON.stringify(merged)); } catch (_) {}
         return;
       }
     } catch (_) { /* retain cached data */ }
 
     // 3. Persistent CMS cache fallback
-    try {
-      const cached = localStorage.getItem(`cms_cache_${supaTable}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setter(parsed);
-          return;
-        }
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
-          setter(parsed);
-          return;
-        }
-      }
-    } catch (_) {}
+    if (localCache.length > 0) {
+      setter(localCache);
+      return;
+    }
   };
 
   /**
@@ -436,20 +439,28 @@ export default function useAdminState() {
 
   // Fetch clients & brand logos
   const fetchClients = () => fetchWithFallback('/clients', 'clients', (data) => {
-    let enriched = data.map(c => ({
+    let localCache = [];
+    try {
+      const cachedStr = localStorage.getItem('cms_cache_clients');
+      if (cachedStr) {
+        const parsed = JSON.parse(cachedStr);
+        if (Array.isArray(parsed)) localCache = parsed;
+      }
+    } catch (_) {}
+
+    const map = new Map();
+    INITIAL_CLIENTS.forEach(c => map.set(String(c.id), c));
+    (Array.isArray(data) ? data : []).forEach(c => map.set(String(c.id), c));
+    localCache.forEach(c => map.set(String(c.id), c));
+
+    let enriched = Array.from(map.values()).map(c => ({
       ...c,
       category: c.category || 'Client',
-      logo_path: c.logo_path || null
+      logo_path: c.logo_path || null,
+      sort_order: Number(c.sort_order) || 0
     }));
 
-    // Ensure default Global Brands are present if DB table only had Prestigious Clients
-    const hasBrands = enriched.some(c => c.category === 'Brand');
-    if (!hasBrands) {
-      const defaultBrands = INITIAL_CLIENTS.filter(c => c.category === 'Brand');
-      enriched = [...enriched, ...defaultBrands];
-    }
-
-    const sorted = [...enriched].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+    const sorted = enriched.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
     setClients(sorted);
     try { localStorage.setItem('cms_cache_clients', JSON.stringify(sorted)); } catch (_) {}
   }, 'sort_order');
