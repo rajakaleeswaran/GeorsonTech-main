@@ -112,6 +112,53 @@ const INITIAL_SOLUTION_CATEGORIES = [
   { id: 4, name: "SPM Engineering", slug: "spm-engineering" }
 ];
 
+const INITIAL_SOLUTIONS = [
+  {
+    id: 1,
+    name: "Factory Automation & PLC Programming",
+    slug: "factory-automation-plc",
+    category_id: 1,
+    category_name: "Factory Automation",
+    description: "End-to-end Siemens and Allen-Bradley PLC, HMI, SCADA programming, and motion control integration for automated manufacturing lines.",
+    status: "Publish",
+    image_path: "uploads/images/S-001.jpg",
+    sort_order: 10
+  },
+  {
+    id: 2,
+    name: "Turnkey Power Distribution & PCC Panels",
+    slug: "power-distribution-pcc",
+    category_id: 2,
+    category_name: "Power Distribution",
+    description: "Design, CPRI testing, fabrication, and site erection of PCC, MCC, and main LT power distribution boards for industrial plants.",
+    status: "Publish",
+    image_path: "uploads/images/S-002.jpg",
+    sort_order: 20
+  },
+  {
+    id: 3,
+    name: "Cloud Telemetry & IIoT Edge Dashboards",
+    slug: "cloud-telemetry-iiot",
+    category_id: 3,
+    category_name: "Cloud Telemetry",
+    description: "Modbus/Ethernet edge gateway installation, protocol conversion, and real-time remote cloud dashboards for OEE and predictive maintenance.",
+    status: "Publish",
+    image_path: "uploads/images/S-008.jpg",
+    sort_order: 30
+  },
+  {
+    id: 4,
+    name: "Special Purpose Machine (SPM) Engineering",
+    slug: "spm-engineering-solutions",
+    category_id: 4,
+    category_name: "SPM Engineering",
+    description: "Custom SPM design, pneumatic workbenches, automated testing rigs, and material handling solutions tailored to factory production goals.",
+    status: "Publish",
+    image_path: "uploads/images/S-005.png",
+    sort_order: 40
+  }
+];
+
 export default function useAdminState() {
 
   const [token, setToken] = useState(() => sessionStorage.getItem('admin_token') || '');
@@ -171,7 +218,7 @@ export default function useAdminState() {
     }
     return INITIAL_CLIENTS;
   });
-  const [solutions, setSolutions] = useState(() => getInitialCache('solutions', []));
+  const [solutions, setSolutions] = useState(() => getInitialCache('solutions', INITIAL_SOLUTIONS));
   const [solutionCategories, setSolutionCategories] = useState(() => getInitialCache('solution_categories', INITIAL_SOLUTION_CATEGORIES));
   const [mediaAssets, setMediaAssets] = useState([]);
 
@@ -497,7 +544,21 @@ export default function useAdminState() {
       setSolutionCategories(data);
     });
     await fetchWithFallback('/solutions', 'solutions', (data) => {
-      const enriched = data.map(s => {
+      let localCache = [];
+      try {
+        const cachedStr = localStorage.getItem('cms_cache_solutions');
+        if (cachedStr) {
+          const parsed = JSON.parse(cachedStr);
+          if (Array.isArray(parsed)) localCache = parsed;
+        }
+      } catch (_) {}
+
+      const map = new Map();
+      INITIAL_SOLUTIONS.forEach(s => map.set(String(s.id), s));
+      (Array.isArray(data) ? data : []).forEach(s => map.set(String(s.id), s));
+      localCache.forEach(s => map.set(String(s.id), s));
+
+      const enriched = Array.from(map.values()).map(s => {
         const cat = cats.find(c => String(c.id) === String(s.category_id) || c.name === s.category_id || c.slug === s.category_id);
         return {
           ...s,
@@ -505,8 +566,9 @@ export default function useAdminState() {
           image_path: s.image_path || null
         };
       });
-      setSolutions(enriched);
-      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(enriched)); } catch (_) {}
+      const sorted = enriched.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+      setSolutions(sorted);
+      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(sorted)); } catch (_) {}
     });
   };
 
