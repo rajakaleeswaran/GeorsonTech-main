@@ -117,19 +117,49 @@ function IndustryDetail() {
     );
   }
 
-  // Get challenges metadata
-  const meta = SECTOR_METADATA[slug] || {
-    challenges: [
+  // Parse challenges list dynamically from DB or fallback
+  let challengesList = [];
+  if (industry.challenges) {
+    if (typeof industry.challenges === 'string') {
+      try {
+        const parsed = JSON.parse(industry.challenges);
+        challengesList = Array.isArray(parsed) ? parsed : industry.challenges.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      } catch {
+        challengesList = industry.challenges.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      }
+    } else if (Array.isArray(industry.challenges)) {
+      challengesList = industry.challenges;
+    }
+  }
+  if (challengesList.length === 0) {
+    challengesList = SECTOR_METADATA[slug]?.challenges || [
       "Process efficiency bottlenecks and legacy instrumentation limits.",
       "High power consumption during peak load operations.",
       "Regulatory compliance audits and safety interlock demands."
-    ],
-    capabilities: [
+    ];
+  }
+
+  // Parse capabilities list dynamically from DB or fallback
+  let capabilitiesList = [];
+  if (industry.capabilities) {
+    if (typeof industry.capabilities === 'string') {
+      try {
+        const parsed = JSON.parse(industry.capabilities);
+        capabilitiesList = Array.isArray(parsed) ? parsed : industry.capabilities.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      } catch {
+        capabilitiesList = industry.capabilities.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      }
+    } else if (Array.isArray(industry.capabilities)) {
+      capabilitiesList = industry.capabilities;
+    }
+  }
+  if (capabilitiesList.length === 0) {
+    capabilitiesList = SECTOR_METADATA[slug]?.capabilities || [
       "Bespoke system design and site layout planning.",
       "Deployment of custom automation algorithms and telemetry loops.",
       "Complete documentation, wiring testing, and annual AMC support."
-    ]
-  };
+    ];
+  }
 
   return (
     <>
@@ -182,7 +212,7 @@ function IndustryDetail() {
                   <FaExclamationTriangle /> Industry Challenges
                 </h4>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {meta.challenges.map((ch, i) => (
+                  {challengesList.map((ch, i) => (
                     <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13.5px', color: '#4f111e' }}>
                       <span style={{ color: '#be123c', fontWeight: 'bold' }}>•</span> {ch}
                     </li>
@@ -196,7 +226,7 @@ function IndustryDetail() {
                   <FaTools /> Project Capabilities
                 </h4>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {meta.capabilities.map((cap, i) => (
+                  {capabilitiesList.map((cap, i) => (
                     <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13.5px', color: '#1e3a8a' }}>
                       <FaCheckCircle style={{ color: '#0093DD', marginTop: '3px', flexShrink: 0 }} /> {cap}
                     </li>

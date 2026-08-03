@@ -67,7 +67,30 @@ function IndustriesTab({
           </div>
           <div className="form-group">
             <label>Detailed Description</label>
-            <textarea className="form-textarea" rows="6" value={industryForm.detailed_description} onChange={e => setIndustryForm(prev => ({ ...prev, detailed_description: e.target.value }))} />
+            <textarea className="form-textarea" rows="4" value={industryForm.detailed_description} onChange={e => setIndustryForm(prev => ({ ...prev, detailed_description: e.target.value }))} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="form-group">
+              <label>Industry Challenges (Comma or line-separated)</label>
+              <textarea 
+                className="form-textarea" 
+                rows="3" 
+                placeholder="Challenge 1, Challenge 2, Challenge 3..." 
+                value={industryForm.challenges || ''} 
+                onChange={e => setIndustryForm(prev => ({ ...prev, challenges: e.target.value }))} 
+              />
+            </div>
+            <div className="form-group">
+              <label>Project Capabilities (Comma or line-separated)</label>
+              <textarea 
+                className="form-textarea" 
+                rows="3" 
+                placeholder="Capability 1, Capability 2, Capability 3..." 
+                value={industryForm.capabilities || ''} 
+                onChange={e => setIndustryForm(prev => ({ ...prev, capabilities: e.target.value }))} 
+              />
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="form-group">

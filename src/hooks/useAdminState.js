@@ -167,7 +167,7 @@ export default function useAdminState() {
   });
 
   const [industryForm, setIndustryForm] = useState({
-    name: '', slug: '', description: '', detailed_description: '', sort_order: 0, status: 'Publish'
+    name: '', slug: '', description: '', detailed_description: '', challenges: '', capabilities: '', sort_order: 0, status: 'Publish'
   });
   const [industryImage, setIndustryImage] = useState(null);
 
@@ -1461,6 +1461,8 @@ export default function useAdminState() {
     formData.append('slug', industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
     formData.append('description', industryForm.description || '');
     formData.append('detailed_description', industryForm.detailed_description || '');
+    formData.append('challenges', industryForm.challenges || '');
+    formData.append('capabilities', industryForm.capabilities || '');
     formData.append('sort_order', industryForm.sort_order || 0);
     formData.append('status', industryForm.status || 'Publish');
     if (industryImage) formData.append('image', industryImage);
@@ -1488,6 +1490,8 @@ export default function useAdminState() {
         slug: industryForm.slug || industryForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: industryForm.description || '',
         detailed_description: industryForm.detailed_description || '',
+        challenges: industryForm.challenges || '',
+        capabilities: industryForm.capabilities || '',
         sort_order: Number(industryForm.sort_order) || 0,
         status: industryForm.status || 'Publish',
         ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
