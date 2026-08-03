@@ -158,18 +158,27 @@ const FALLBACK_DATA = {
  * Perform a fetch to the backend or fallback to Supabase / local CMS cache / defaults
  */
 export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*') {
+  let localCache = [];
+  try {
+    const cached = localStorage.getItem(`cms_cache_${supabaseTable}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) localCache = parsed;
+    }
+  } catch (_) {}
+
   // 1. Try local Express backend
   try {
     const res = await fetch(`${API_BASE}${endpoint}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
-        return data;
-      }
-      if (typeof data === 'object' && Object.keys(data).length > 0 && !Array.isArray(data)) {
-        try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
-        return data;
+        const map = new Map();
+        data.forEach(item => map.set(String(item.id), item));
+        localCache.forEach(item => map.set(String(item.id), item));
+        const merged = Array.from(map.values());
+        try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(merged)); } catch (_) {}
+        return merged;
       }
     }
   } catch (err) {
@@ -183,26 +192,21 @@ export async function fetchCollection(endpoint, supabaseTable, selectQuery = '*'
       .select(selectQuery);
     
     if (!error && Array.isArray(data) && data.length > 0) {
-      try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(data)); } catch (_) {}
-      return data;
+      const map = new Map();
+      data.forEach(item => map.set(String(item.id), item));
+      localCache.forEach(item => map.set(String(item.id), item));
+      const merged = Array.from(map.values());
+      try { localStorage.setItem(`cms_cache_${supabaseTable}`, JSON.stringify(merged)); } catch (_) {}
+      return merged;
     }
   } catch (e) {
     console.warn(`Supabase fallback unavailable for ${supabaseTable}`);
   }
 
   // 3. Local persistent CMS cache fallback (ensures user updates stick after refresh)
-  try {
-    const cached = localStorage.getItem(`cms_cache_${supabaseTable}`);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
-        return parsed;
-      }
-    }
-  } catch (_) {}
+  if (localCache.length > 0) {
+    return localCache;
+  }
 
   // 4. Return static fallback collection if backend and cloud DB are unpopulated
   return FALLBACK_DATA[supabaseTable] || [];
