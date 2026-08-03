@@ -34,60 +34,52 @@ function IndustryDetail() {
     let isMounted = true;
 
     const fetchIndustry = async () => {
-      // 1. Try local backend
+      let matchedData = null;
+      const baseSlug = slug ? slug.replace(/-industries$/, '') : '';
+
+      // 1. Check local cache first (saved immediately by Admin panel)
       try {
-        const res = await fetch(`${API_BASE_URL}/industries/${slug}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) setIndustry(data);
-          
-          try {
-            const solRes = await fetch(`${API_BASE_URL}/solutions?industry=${data.id}`);
-            if (solRes.ok) {
-              const solData = await solRes.json();
-              if (Array.isArray(solData) && isMounted) setSolutions(solData);
-            }
-          } catch (_e) {
-            // Solutions fetch failure handled gracefully
+        const cachedStr = localStorage.getItem('cms_cache_industries');
+        if (cachedStr) {
+          const cachedList = JSON.parse(cachedStr);
+          if (Array.isArray(cachedList)) {
+            matchedData = cachedList.find(i => 
+              i.slug === slug || 
+              i.slug === baseSlug || 
+              String(i.id) === String(slug) ||
+              (i.name && i.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') === slug)
+            );
           }
-          if (isMounted) setLoading(false);
-          return;
         }
-      } catch (_err) {
-        console.warn("Local backend down. Querying Supabase for industry details.");
+      } catch (_) {}
+
+      // 2. Try local backend API if available
+      if (!matchedData) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/industries/${slug}`);
+          if (res.ok) {
+            matchedData = await res.json();
+          }
+        } catch (_err) {}
       }
 
+      // 3. Supabase Cloud DB Fallback
+      if (!matchedData) {
+        try {
+          const { data: indData } = await supabase
+            .from('industries')
+            .select('*')
+            .or(`slug.eq.${slug},slug.eq.${baseSlug}`)
+            .maybeSingle();
 
-      // 2. Supabase Fallback
-      const { data: indData, error } = await supabase
-        .from('industries')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-      if (!error && indData) {
-        setIndustry(indData);
-
-        // Fetch solutions
-        const { data: solData, error: solError } = await supabase
-          .from('solutions')
-          .select('*');
-        
-        if (!solError && solData) {
-          const filteredSolutions = solData.filter(sol => {
-            try {
-              const ids = typeof sol.industry_ids === 'string' ? JSON.parse(sol.industry_ids) : sol.industry_ids;
-              return Array.isArray(ids) && ids.includes(indData.id);
-            } catch {
-              return false;
-            }
-          });
-          setSolutions(filteredSolutions);
-        }
-      } else {
-        setIndustry(null);
+          if (indData) matchedData = indData;
+        } catch (_) {}
       }
-      if (isMounted) setLoading(false);
+
+      if (isMounted) {
+        setIndustry(matchedData || null);
+        setLoading(false);
+      }
     };
 
     fetchIndustry();
@@ -131,8 +123,10 @@ function IndustryDetail() {
       challengesList = industry.challenges;
     }
   }
+  const baseSlug = slug ? slug.replace(/-industries$/, '') : '';
+
   if (challengesList.length === 0) {
-    challengesList = SECTOR_METADATA[slug]?.challenges || [
+    challengesList = SECTOR_METADATA[slug]?.challenges || SECTOR_METADATA[baseSlug]?.challenges || [
       "Process efficiency bottlenecks and legacy instrumentation limits.",
       "High power consumption during peak load operations.",
       "Regulatory compliance audits and safety interlock demands."
@@ -154,7 +148,7 @@ function IndustryDetail() {
     }
   }
   if (capabilitiesList.length === 0) {
-    capabilitiesList = SECTOR_METADATA[slug]?.capabilities || [
+    capabilitiesList = SECTOR_METADATA[slug]?.capabilities || SECTOR_METADATA[baseSlug]?.capabilities || [
       "Bespoke system design and site layout planning.",
       "Deployment of custom automation algorithms and telemetry loops.",
       "Complete documentation, wiring testing, and annual AMC support."
