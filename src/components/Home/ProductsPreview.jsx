@@ -91,7 +91,7 @@ function ProductsPreview() {
             : FALLBACK_IMAGES[i % FALLBACK_IMAGES.length];
 
           return (
-            <Link key={prod.id || i} to="/products" className="product-preview-card">
+            <Link key={prod.id || i} to={`/products/${prod.slug || prod.id}`} className="product-preview-card">
               <div className="product-preview-img">
                 <img
                   src={imgSrc}

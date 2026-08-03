@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { FaSearch, FaFilePdf, FaInfoCircle, FaTimes, FaEnvelope } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import '../styles/Products.css';
 import { fetchCollection, getAssetUrl } from '../lib/dbHelper';
 
 function Products() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -33,17 +36,26 @@ function Products() {
               c.name?.toLowerCase() === String(p.category_id).toLowerCase() ||
               c.slug?.toLowerCase() === String(p.category_id).toLowerCase()
             );
+            const brochure = p.pdf_brochure_path || p.brochure_path || null;
             return {
               ...p,
+              pdf_brochure_path: brochure,
+              brochure_path: brochure,
               category_name: p.category_name || (matchedCat ? matchedCat.name : (p.category_id ? String(p.category_id) : 'General'))
             };
           });
           setProducts(enriched);
+
+          // Auto-select product if slug route parameter is present
+          if (slug) {
+            const matched = enriched.find(p => p.slug === slug || String(p.id) === String(slug));
+            if (matched) setSelectedProduct(matched);
+          }
         }
       })
       .catch(err => console.error("Failed to fetch products or categories:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [slug]);
 
   const filtered = useMemo(() => {
     return products.filter(p => {
@@ -56,6 +68,20 @@ function Products() {
       return matchCat && matchSearch;
     });
   }, [activeCategory, searchQuery, products]);
+
+  const openProductDetails = (product) => {
+    setSelectedProduct(product);
+    if (product.slug) {
+      window.history.pushState(null, '', `/products/${product.slug}`);
+    }
+  };
+
+  const closeProductDetails = () => {
+    setSelectedProduct(null);
+    if (slug) {
+      navigate('/products');
+    }
+  };
 
 
   return (
@@ -137,6 +163,10 @@ function Products() {
                   }
                 }
 
+                const brochureUrl = (product.pdf_brochure_path || product.brochure_path)
+                  ? getAssetUrl(product.pdf_brochure_path || product.brochure_path, 'brochure')
+                  : null;
+
                 return (
                   <div key={product.id} className="product-card">
                     <div className="product-card-img" style={{ position: 'relative', height: '220px', background: '#e2e8f0', overflow: 'hidden' }}>
@@ -165,21 +195,21 @@ function Products() {
                       <div className="product-card-actions" style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
                         <button 
                           className="product-btn-details" 
-                          onClick={() => setSelectedProduct(product)}
-                          style={{ flex: 1, padding: '10px', fontSize: '13px', background: '#0093DD', color: '#fff', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          onClick={() => openProductDetails(product)}
+                          style={{ flex: 1, padding: '10px', fontSize: '13px', background: '#0093DD', color: '#fff', border: 'none', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600' }}
                         >
                           <FaInfoCircle /> Details
                         </button>
-                         {(product.pdf_brochure_path || product.brochure_path) && (
+                        {brochureUrl && (
                           <a 
-                            href={getAssetUrl(product.pdf_brochure_path || product.brochure_path, 'brochure')} 
+                            href={brochureUrl} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="product-btn-pdf" 
                             title="Download Brochure"
-                            style={{ padding: '10px 14px', fontSize: '13px', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                            style={{ padding: '10px 14px', fontSize: '13px', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontWeight: '600', gap: '6px' }}
                           >
-                            <FaFilePdf />
+                            <FaFilePdf /> Brochure
                           </a>
                         )}
                       </div>
@@ -198,128 +228,133 @@ function Products() {
       </div>
 
       {/* Product Details Modal */}
-      {selectedProduct && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.7)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px'
-        }}>
+      {selectedProduct && (() => {
+        const modalBrochureUrl = (selectedProduct.pdf_brochure_path || selectedProduct.brochure_path)
+          ? getAssetUrl(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path, 'brochure')
+          : null;
+
+        return (
           <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            maxWidth: '650px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            position: 'relative'
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px'
           }}>
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedProduct(null)}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: '#f1f5f9',
-                border: 'none',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                zIndex: 10
-              }}
-            >
-              <FaTimes style={{ color: '#64748b' }} />
-            </button>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '650px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              position: 'relative'
+            }}>
+              {/* Close Button */}
+              <button 
+                onClick={closeProductDetails}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 10
+                }}
+              >
+                <FaTimes style={{ color: '#64748b' }} />
+              </button>
 
-            {/* Modal Image */}
-            <div style={{ height: '260px', width: '100%', background: '#e2e8f0' }}>
-              <img 
-                src={selectedProduct.image_path ? getAssetUrl(selectedProduct.image_path) : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
-                alt={selectedProduct.name} 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
+              {/* Modal Image */}
+              <div style={{ height: '260px', width: '100%', background: '#e2e8f0' }}>
+                <img 
+                  src={selectedProduct.image_path ? getAssetUrl(selectedProduct.image_path) : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'} 
+                  alt={selectedProduct.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
 
-            {/* Modal Body */}
-            <div style={{ padding: '30px' }}>
-              <span className="product-card-badge" style={{ background: '#0093DD', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
-                {selectedProduct.category_name || "General"}
-              </span>
-              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginTop: '10px', marginBottom: '14px' }}>
-                {selectedProduct.name}
-              </h2>
-              
-              <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: 1.6, marginBottom: '24px' }}>
-                {selectedProduct.description}
-              </p>
+              {/* Modal Body */}
+              <div style={{ padding: '30px' }}>
+                <span className="product-card-badge" style={{ background: '#0093DD', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                  {selectedProduct.category_name || "General"}
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginTop: '10px', marginBottom: '14px' }}>
+                  {selectedProduct.name}
+                </h2>
+                
+                <p style={{ fontSize: '14.5px', color: '#475569', lineHeight: 1.6, marginBottom: '24px' }}>
+                  {selectedProduct.description}
+                </p>
 
-              {/* Technical Specifications */}
-              {selectedProduct.specifications && (() => {
-                // Parse specs: could be JSON array string or comma-separated
-                let specItems = [];
-                if (typeof selectedProduct.specifications === 'string') {
-                  try {
-                    const parsed = JSON.parse(selectedProduct.specifications);
-                    specItems = Array.isArray(parsed) ? parsed : [selectedProduct.specifications];
-                  } catch {
-                    specItems = selectedProduct.specifications.split(',').map(s => s.trim()).filter(Boolean);
+                {/* Technical Specifications */}
+                {selectedProduct.specifications && (() => {
+                  let specItems = [];
+                  if (typeof selectedProduct.specifications === 'string') {
+                    try {
+                      const parsed = JSON.parse(selectedProduct.specifications);
+                      specItems = Array.isArray(parsed) ? parsed : [selectedProduct.specifications];
+                    } catch {
+                      specItems = selectedProduct.specifications.split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                  } else if (Array.isArray(selectedProduct.specifications)) {
+                    specItems = selectedProduct.specifications;
                   }
-                } else if (Array.isArray(selectedProduct.specifications)) {
-                  specItems = selectedProduct.specifications;
-                }
-                return specItems.length > 0 ? (
-                  <div style={{ marginBottom: '24px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
-                      Technical Specifications:
-                    </h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {specItems.map((spec, i) => (
-                        <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px' }}>
-                          {typeof spec === 'string' ? spec.trim() : spec}
-                        </span>
-                      ))}
+                  return specItems.length > 0 ? (
+                    <div style={{ marginBottom: '24px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
+                        Technical Specifications:
+                      </h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {specItems.map((spec, i) => (
+                          <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: '4px', fontSize: '12.5px' }}>
+                            {typeof spec === 'string' ? spec.trim() : spec}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : null;
-              })()}
+                  ) : null;
+                })()}
 
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <Link 
-                  to={`/enquiry?tab=enquiry&product=${encodeURIComponent(selectedProduct.name)}`}
-                  className="btn-primary" 
-                  style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
-                  onClick={() => setSelectedProduct(null)}
-                >
-                  <FaEnvelope /> Request Callback
-                </Link>
-                 {(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path) && (
-                  <a 
-                    href={getAssetUrl(selectedProduct.pdf_brochure_path || selectedProduct.brochure_path, 'brochure')} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="btn-outline"
-                    style={{ borderColor: '#ef4444', color: '#ef4444', padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', borderRadius: '6px', fontWeight: '600' }}
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                  <Link 
+                    to={`/enquiry?tab=enquiry&product=${encodeURIComponent(selectedProduct.name)}`}
+                    className="btn-primary" 
+                    style={{ background: '#0093DD', border: 'none', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', borderRadius: '6px' }}
+                    onClick={closeProductDetails}
                   >
-                    <FaFilePdf /> Download Brochure
-                  </a>
-                )}
+                    <FaEnvelope /> Request Callback
+                  </Link>
+                  {modalBrochureUrl && (
+                    <a 
+                      href={modalBrochureUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn-outline"
+                      style={{ borderColor: '#ef4444', color: '#ef4444', padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', borderRadius: '6px', fontWeight: '600' }}
+                    >
+                      <FaFilePdf /> Download Brochure
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

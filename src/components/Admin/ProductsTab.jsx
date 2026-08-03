@@ -60,12 +60,35 @@ function ProductsTab({
 
             <div className="form-group">
               <label>Product Name</label>
-              <input type="text" className="form-input" required value={productForm.name} onChange={e => setProductForm(prev => ({ ...prev, name: e.target.value }))} />
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={productForm.name || ''}
+                onChange={e => {
+                  const nameVal = e.target.value;
+                  const autoSlug = nameVal.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                  setProductForm(prev => ({
+                    ...prev,
+                    name: nameVal,
+                    slug: editingProduct === 'new' || !prev.slug ? autoSlug : prev.slug
+                  }));
+                }}
+              />
             </div>
 
             <div className="form-group">
               <label>Slug (Unique URL)</label>
-              <input type="text" className="form-input" required value={productForm.slug} onChange={e => setProductForm(prev => ({ ...prev, slug: e.target.value }))} />
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={productForm.slug || ''}
+                onChange={e => {
+                  const slugVal = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                  setProductForm(prev => ({ ...prev, slug: slugVal }));
+                }}
+              />
             </div>
 
             <div className="form-group">

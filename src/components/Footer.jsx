@@ -123,7 +123,7 @@ function Footer() {
           </nav>
           <nav className="footer-links" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {products.length > 0 ? (
-              products.map(p => <Link key={p.id} to="/products"><FaAngleRight /> {p.name}</Link>)
+              products.map(p => <Link key={p.id} to={`/products/${p.slug || p.id}`}><FaAngleRight /> {p.name}</Link>)
             ) : (
               <>
                 <Link to="/products"><FaAngleRight /> Electrical Panels</Link>

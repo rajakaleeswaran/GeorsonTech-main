@@ -1021,16 +1021,26 @@ export default function useAdminState() {
         }
       } else if (error) {
         console.warn(`[Frontend Supabase Upload Error] Bucket: ${bucketName}, Error: ${error.message}`);
+        // Fallback: try uploading to general 'uploads' bucket
+        if (bucketName !== 'uploads') {
+          const { data: uData, error: uError } = await supabase.storage
+            .from('uploads')
+            .upload(fileName, file, { contentType: file.type || 'application/octet-stream', cacheControl: '3600', upsert: true });
+          if (!uError && uData) {
+            const { data: uPublicData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+            if (uPublicData?.publicUrl) return uPublicData.publicUrl;
+          }
+        }
       }
     } catch (err) {
       console.warn('[Frontend Supabase Upload Exception]:', err);
     }
 
-    // Image compression fallback for images only
+    // Fallback: Compress for images, convert to Data URL for PDF/brochure
     if (file.type && file.type.startsWith('image/')) {
       return await compressImage(file);
     }
-    return null;
+    return await fileToDataURL(file);
   };
 
 
@@ -1184,7 +1194,7 @@ export default function useAdminState() {
     }
   };
 
-  // Products CRUD handlers — Supabase-only path
+  // Products CRUD handlers
   const saveProduct = async (e) => {
     e.preventDefault();
     const isNew = editingProduct === 'new';
@@ -1205,43 +1215,76 @@ export default function useAdminState() {
       }
     }
 
-    // --- Step 1: Determine existing paths before any upload ---
+    // --- Step 1: Existing paths ---
     let uploadedImgPath = editingProduct?.image_path || productForm?.image_path || null;
     let uploadedBrochurePath = editingProduct?.pdf_brochure_path || editingProduct?.brochure_path || productForm?.pdf_brochure_path || productForm?.brochure_path || null;
 
-    console.log('[saveProduct Step 1a] Pre-upload state:', { isNew, editingProductId: editingProduct?.id, existingImagePath: uploadedImgPath, existingBrochurePath: uploadedBrochurePath });
+    console.log('[saveProduct Step 1] Pre-upload state:', { isNew, existingImagePath: uploadedImgPath, existingBrochurePath: uploadedBrochurePath });
 
     // --- Step 2: Upload new files if selected ---
     if (productImage) {
       const imgUrl = await uploadImageToSupabase(productImage, 'products');
-      console.log('[saveProduct Step 2a] uploadImageToSupabase returned:', imgUrl);
       if (imgUrl) uploadedImgPath = imgUrl;
     }
     if (productBrochure) {
       const pdfUrl = await uploadImageToSupabase(productBrochure, 'brochures');
-      console.log('[saveProduct Step 2b] uploadBrochureToSupabase returned:', pdfUrl);
       if (pdfUrl) uploadedBrochurePath = pdfUrl;
     }
 
-    console.log('[saveProduct Step 2c] Final URLs after upload:', { uploadedImgPath, uploadedBrochurePath });
+    console.log('[saveProduct Step 2] Final URLs after upload:', { uploadedImgPath, uploadedBrochurePath });
 
-    // --- Step 3: Resolve category ---
+    // --- Step 3: Resolve category & slug ---
     const catIdNum = Number(productForm.category_id);
     const validCatId = productForm.category_id
       ? (!isNaN(catIdNum) ? catIdNum : productForm.category_id)
       : null;
-    const matchedCat = productCategories.find(c =>
-      String(c.id) === String(productForm.category_id) ||
-      c.name?.toLowerCase() === String(productForm.category_id).toLowerCase() ||
-      c.slug?.toLowerCase() === String(productForm.category_id).toLowerCase()
-    );
-    const categoryName = matchedCat ? matchedCat.name : (productForm.category_id || '');
 
-    // --- Step 4: Build exact Supabase payload ---
+    const formattedSlug = (productForm.slug || productForm.name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // --- Try Local Express Backend API First ---
+    try {
+      const formData = new FormData();
+      formData.append('category_id', validCatId || '');
+      formData.append('name', productForm.name);
+      formData.append('slug', formattedSlug || `product-${Date.now()}`);
+      formData.append('description', productForm.description || '');
+      formData.append('specifications', specsJson || '[]');
+      formData.append('video_url', productForm.video_url || '');
+      formData.append('is_featured', productForm.is_featured ? 'true' : 'false');
+      if (uploadedImgPath) formData.append('image_path', uploadedImgPath);
+      if (uploadedBrochurePath) formData.append('pdf_brochure_path', uploadedBrochurePath);
+      if (productImage) formData.append('image', productImage);
+      if (productBrochure) formData.append('brochure', productBrochure);
+
+      const url = isNew
+        ? `${API_BASE_URL}/admin/products`
+        : `${API_BASE_URL}/admin/products/${editingProduct.id}`;
+
+      const res = await fetch(url, {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
+        body: formData
+      });
+
+      if (res.ok) {
+        toast.success(isNew ? 'Product created successfully!' : 'Product updated successfully!');
+        setEditingProduct(null);
+        setProductImage(null);
+        setProductBrochure(null);
+        await fetchProducts();
+        return;
+      }
+    } catch (_) { /* Express backend offline — fall through to Supabase */ }
+
+    // --- Step 4: Write to Supabase Cloud DB ---
     const supabasePayload = {
       category_id: validCatId,
       name: productForm.name,
-      slug: productForm.slug || productForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      slug: formattedSlug || `product-${Date.now()}`,
       description: productForm.description || '',
       specifications: specsJson || '[]',
       video_url: productForm.video_url || '',
@@ -1250,53 +1293,27 @@ export default function useAdminState() {
       pdf_brochure_path: uploadedBrochurePath
     };
 
+    console.log('[saveProduct Step 4] Supabase payload:', JSON.stringify(supabasePayload));
 
-    console.log('[saveProduct Step 4] Supabase payload BEFORE write:', JSON.stringify(supabasePayload));
-
-    // --- Step 5: Write to Supabase ---
-    let writeData = null;
     let writeError = null;
 
     if (isNew) {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('products')
-        .insert([supabasePayload])
-        .select();
-      writeData = data;
+        .insert([supabasePayload]);
       writeError = error;
     } else {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('products')
         .update(supabasePayload)
-        .eq('id', editingProduct.id)
-        .select();
-      writeData = data;
+        .eq('id', editingProduct.id);
       writeError = error;
     }
 
-    console.log('[saveProduct Step 5] Write result:', { data: writeData, error: writeError, affectedRows: writeData ? writeData.length : 0 });
-
     if (writeError) {
-      console.error('[saveProduct Step 5] WRITE FAILED:', writeError.message, writeError.code);
+      console.error('[saveProduct Step 5] Write error:', writeError.message);
       toast.error('Save failed: ' + writeError.message);
       return;
-    }
-
-    // --- Step 6: Immediately re-read from Supabase to verify DB value ---
-    const savedId = isNew ? writeData?.[0]?.id : editingProduct.id;
-    if (savedId) {
-      const { data: verify, error: verifyErr } = await supabase
-        .from('products')
-        .select('id, name, image_path, pdf_brochure_path')
-        .eq('id', savedId)
-        .single();
-      console.log('[saveProduct Step 6] DB verification read:', { verify, verifyErr });
-      if (verify) {
-        console.log('[saveProduct Step 6] CONFIRMED image_path in DB:', verify.image_path || 'NULL ← BUG HERE');
-        if (!verify.image_path && uploadedImgPath) {
-          console.error('[saveProduct Step 6] BUG DETECTED: image_path is NULL in DB but uploadedImgPath was:', uploadedImgPath);
-        }
-      }
     }
 
     toast.success(isNew ? 'Product created!' : 'Product updated!');
@@ -1304,9 +1321,7 @@ export default function useAdminState() {
     setProductImage(null);
     setProductBrochure(null);
 
-    // --- Step 7: Refresh products directly from Supabase ---
     await fetchProducts();
-
   };
 
 
