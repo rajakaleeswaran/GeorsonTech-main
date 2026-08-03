@@ -44,7 +44,9 @@ function DealWithBrand() {
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
         if (Array.isArray(cached)) {
-          const brands = cached.filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand');
+          const brands = cached
+            .filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand')
+            .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
           if (brands.length > 0) {
             setDbBrands(brands);
             return;
@@ -57,7 +59,9 @@ function DealWithBrand() {
     fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand');
+          const filtered = data
+            .filter(c => (!c.status || c.status === 'Publish') && c.category === 'Brand')
+            .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
           if (filtered.length > 0) {
             setDbBrands(filtered);
           }

@@ -58,7 +58,9 @@ function ClientsBody() {
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
         if (Array.isArray(cached) && cached.length > 0) {
-          const filtered = cached.filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category));
+          const filtered = cached
+            .filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category))
+            .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
           if (filtered.length > 0) {
             setClients(filtered);
             return;
@@ -71,7 +73,9 @@ function ClientsBody() {
     fetchCollection('/clients', 'clients')
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category));
+          const filtered = data
+            .filter(c => (!c.status || c.status === 'Publish') && (c.category === 'Client' || !c.category))
+            .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
           if (filtered.length > 0) {
             setClients(filtered);
           }
