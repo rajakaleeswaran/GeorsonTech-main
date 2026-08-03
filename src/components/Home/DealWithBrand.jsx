@@ -15,6 +15,25 @@ const images = import.meta.glob("../../assets/Brands/*.{png,jpg,jpeg}", {
 
 const FALLBACK_BRANDS = Object.values(images).map((img) => img.default);
 
+const brandImageMap = {};
+Object.entries(images).forEach(([path, module]) => {
+  const filename = path.split('/').pop().toLowerCase();
+  brandImageMap[filename] = module.default;
+});
+
+function getBrandLogo(b) {
+  if (!b) return '';
+  const path = b.logo_path || '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  const filename = path.split('/').pop().toLowerCase();
+  if (brandImageMap[filename]) {
+    return brandImageMap[filename];
+  }
+  return getAssetUrl(path);
+}
+
 function DealWithBrand() {
   const [dbBrands, setDbBrands] = useState([]);
 
@@ -85,7 +104,7 @@ function DealWithBrand() {
               dbBrands.map((b, index) => (
                 <SwiperSlide key={b.id || index}>
                   <div className="brand-card">
-                    <img src={getAssetUrl(b.logo_path)} alt={b.name} />
+                    <img src={getBrandLogo(b)} alt={b.name} />
                   </div>
                 </SwiperSlide>
               ))

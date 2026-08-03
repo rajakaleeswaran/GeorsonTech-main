@@ -2,6 +2,26 @@ import { getAssetUrl } from '../../lib/api';
 import React, { useState } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaSort, FaImage } from 'react-icons/fa';
 
+const brandImages = import.meta.glob('../../assets/Brands/*.{png,jpg,jpeg}', { eager: true });
+const brandImageMap = {};
+Object.entries(brandImages).forEach(([path, module]) => {
+  const filename = path.split('/').pop().toLowerCase();
+  brandImageMap[filename] = module.default;
+});
+
+function getClientLogoUrl(logoPath) {
+  if (!logoPath) return '';
+  const clean = String(logoPath).trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+    return clean;
+  }
+  const filename = clean.split('/').pop().toLowerCase();
+  if (brandImageMap[filename]) {
+    return brandImageMap[filename];
+  }
+  return getAssetUrl(clean);
+}
+
 function ClientsTab({
   clients,
   editingClient,
@@ -92,7 +112,7 @@ function ClientsTab({
             {editingClient !== 'new' && clientForm.logo_path && (
               <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <img
-                  src={getAssetUrl(clientForm.logo_path)}
+                  src={getClientLogoUrl(clientForm.logo_path)}
                   alt={clientForm.name}
                   style={{ height: '40px', maxWidth: '120px', objectFit: 'contain' }}
                   onError={e => { e.target.style.display = 'none'; }}
@@ -195,7 +215,7 @@ function ClientsTab({
                     <td>
                       {c.logo_path ? (
                         <img
-                          src={getAssetUrl(c.logo_path)}
+                          src={getClientLogoUrl(c.logo_path)}
                           alt={c.name}
                           style={{ height: '36px', objectFit: 'contain', maxWidth: '80px' }}
                           onError={e => { e.target.style.opacity = '0'; }}

@@ -12,25 +12,30 @@ import { API_BASE_URL } from '../lib/api';
 
 
 const INITIAL_CLIENTS = [
-  // Prestigious Clients
-  { id: 1, name: "ABB", category: "Client", status: "Publish", logo_path: "uploads/images/ABB.png" },
-  { id: 2, name: "AIRTRONIC", category: "Client", status: "Publish", logo_path: "uploads/images/AIRTRONIC.jpeg" },
-  { id: 3, name: "BARGA", category: "Client", status: "Publish", logo_path: "uploads/images/BARGA.jpeg" },
-  { id: 4, name: "CHAKR", category: "Client", status: "Publish", logo_path: "uploads/images/CHAKR.png" },
-  { id: 5, name: "DRMILTON", category: "Client", status: "Publish", logo_path: "uploads/images/DRMILTON.jpeg" },
-  { id: 6, name: "GILBARCO", category: "Client", status: "Publish", logo_path: "uploads/images/GILBARCO.png" },
-  { id: 7, name: "LECS", category: "Client", status: "Publish", logo_path: "uploads/images/LECS.jpg" },
-  { id: 8, name: "MARCUS", category: "Client", status: "Publish", logo_path: "uploads/images/MARCUS.jpeg" },
-  { id: 9, name: "NORBAR", category: "Client", status: "Publish", logo_path: "uploads/images/NORBAR.png" },
-  { id: 10, name: "RADIANT", category: "Client", status: "Publish", logo_path: "uploads/images/RADIANT.png" },
-  { id: 11, name: "RAMCO", category: "Client", status: "Publish", logo_path: "uploads/images/RAMCO.jpeg" },
+  // Prestigious Clients (11)
+  { id: 1, name: "ABB", category: "Client", status: "Publish", sort_order: 10, logo_path: "uploads/images/ABB.png" },
+  { id: 2, name: "AIRTRONIC", category: "Client", status: "Publish", sort_order: 20, logo_path: "uploads/images/AIRTRONIC.jpeg" },
+  { id: 3, name: "BARGA", category: "Client", status: "Publish", sort_order: 30, logo_path: "uploads/images/BARGA.jpeg" },
+  { id: 4, name: "CHAKR", category: "Client", status: "Publish", sort_order: 40, logo_path: "uploads/images/CHAKR.png" },
+  { id: 5, name: "DRMILTON", category: "Client", status: "Publish", sort_order: 50, logo_path: "uploads/images/DRMILTON.jpeg" },
+  { id: 6, name: "GILBARCO", category: "Client", status: "Publish", sort_order: 60, logo_path: "uploads/images/GILBARCO.png" },
+  { id: 7, name: "LECS", category: "Client", status: "Publish", sort_order: 70, logo_path: "uploads/images/LECS.jpg" },
+  { id: 8, name: "MARCUS", category: "Client", status: "Publish", sort_order: 80, logo_path: "uploads/images/MARCUS.jpeg" },
+  { id: 9, name: "NORBAR", category: "Client", status: "Publish", sort_order: 90, logo_path: "uploads/images/NORBAR.png" },
+  { id: 10, name: "RADIANT", category: "Client", status: "Publish", sort_order: 100, logo_path: "uploads/images/RADIANT.png" },
+  { id: 11, name: "RAMCO", category: "Client", status: "Publish", sort_order: 110, logo_path: "uploads/images/RAMCO.jpeg" },
 
-  // Global Brands
-  { id: 101, name: "Phoenix Contact", category: "Brand", status: "Publish", logo_path: "uploads/images/phoenix.png" },
-  { id: 102, name: "Polycab", category: "Brand", status: "Publish", logo_path: "uploads/images/polycab.png" },
-  { id: 103, name: "Powermat", category: "Brand", status: "Publish", logo_path: "uploads/images/powermat.png" },
-  { id: 104, name: "Rittal", category: "Brand", status: "Publish", logo_path: "uploads/images/rittal.png" },
-  { id: 105, name: "Schneider Electric", category: "Brand", status: "Publish", logo_path: "uploads/images/schneider.png" }
+  // Global Brands (10)
+  { id: 101, name: "OMRON", category: "Brand", status: "Publish", sort_order: 120, logo_path: "O-001.png" },
+  { id: 102, name: "ORBIT", category: "Brand", status: "Publish", sort_order: 130, logo_path: "O-002.png" },
+  { id: 103, name: "ORTAC", category: "Brand", status: "Publish", sort_order: 140, logo_path: "O-003.png" },
+  { id: 104, name: "ANCHOR BY PANASONIC", category: "Brand", status: "Publish", sort_order: 150, logo_path: "A-002.png" },
+  { id: 105, name: "PHILIPS", category: "Brand", status: "Publish", sort_order: 160, logo_path: "P-001.png" },
+  { id: 106, name: "PHOENIX CONTACT", category: "Brand", status: "Publish", sort_order: 170, logo_path: "P-002.png" },
+  { id: 107, name: "POLYCAB", category: "Brand", status: "Publish", sort_order: 180, logo_path: "P-004.png" },
+  { id: 108, name: "POWERMAT", category: "Brand", status: "Publish", sort_order: 190, logo_path: "P-005.jpg" },
+  { id: 109, name: "RITTAL", category: "Brand", status: "Publish", sort_order: 200, logo_path: "R-001.png" },
+  { id: 110, name: "SCHNEIDER ELECTRIC", category: "Brand", status: "Publish", sort_order: 210, logo_path: "S-001.jpg" }
 ];
 
 const INITIAL_SERVICES = [
@@ -130,7 +135,18 @@ export default function useAdminState() {
   const [blogCategories, setBlogCategories] = useState(() => getInitialCache('blog_categories', INITIAL_BLOG_CATEGORIES));
   const [services, setServices] = useState(() => getInitialCache('services', INITIAL_SERVICES));
   const [industries, setIndustries] = useState(() => getInitialCache('industries', INITIAL_INDUSTRIES));
-  const [clients, setClients] = useState(() => getInitialCache('clients', INITIAL_CLIENTS));
+  const [clients, setClients] = useState(() => {
+    const cached = getInitialCache('clients', INITIAL_CLIENTS);
+    if (Array.isArray(cached)) {
+      const hasBrands = cached.some(c => c.category === 'Brand');
+      if (!hasBrands) {
+        const defaultBrands = INITIAL_CLIENTS.filter(c => c.category === 'Brand');
+        return [...cached, ...defaultBrands];
+      }
+      return cached;
+    }
+    return INITIAL_CLIENTS;
+  });
   const [solutions, setSolutions] = useState(() => getInitialCache('solutions', []));
   const [solutionCategories, setSolutionCategories] = useState(() => getInitialCache('solution_categories', INITIAL_SOLUTION_CATEGORIES));
   const [mediaAssets, setMediaAssets] = useState([]);
@@ -420,13 +436,23 @@ export default function useAdminState() {
 
   // Fetch clients & brand logos
   const fetchClients = () => fetchWithFallback('/clients', 'clients', (data) => {
-    const enriched = data.map(c => ({
+    let enriched = data.map(c => ({
       ...c,
+      category: c.category || 'Client',
       logo_path: c.logo_path || null
     }));
-    setClients(enriched);
-    try { localStorage.setItem('cms_cache_clients', JSON.stringify(enriched)); } catch (_) {}
-  });
+
+    // Ensure default Global Brands are present if DB table only had Prestigious Clients
+    const hasBrands = enriched.some(c => c.category === 'Brand');
+    if (!hasBrands) {
+      const defaultBrands = INITIAL_CLIENTS.filter(c => c.category === 'Brand');
+      enriched = [...enriched, ...defaultBrands];
+    }
+
+    const sorted = [...enriched].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+    setClients(sorted);
+    try { localStorage.setItem('cms_cache_clients', JSON.stringify(sorted)); } catch (_) {}
+  }, 'sort_order');
 
   // Fetch solutions and solution categories
   const fetchSolutions = async () => {
