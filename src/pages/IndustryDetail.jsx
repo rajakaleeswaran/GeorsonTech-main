@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaLightbulb, FaEnvelope, FaTools } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaEnvelope, FaTools } from 'react-icons/fa';
 import TitleBar from '../components/TitleBar';
 import ServicesTitleImg from '../assets/Services/titleImg.png';
 import { supabase } from '../lib/supabase';
@@ -27,7 +27,6 @@ const SECTOR_METADATA = {
 function IndustryDetail() {
   const { slug } = useParams();
   const [industry, setIndustry] = useState(null);
-  const [solutions, setSolutions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -229,22 +228,7 @@ function IndustryDetail() {
               </div>
             </div>
 
-            {/* Mapped Georson Tech Solutions */}
-            {solutions.length > 0 && (
-              <div style={{ marginBottom: '40px' }}>
-                <h4 style={{ fontSize: '17px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaLightbulb style={{ color: '#eab308' }} /> Georson Tech Mapped Solutions
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  {solutions.map(sol => (
-                    <div key={sol.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc' }}>
-                      <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', marginBottom: '6px' }}>{sol.name}</strong>
-                      <span style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.4 }}>{sol.description}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
 
             {/* Action CTA */}
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>

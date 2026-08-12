@@ -105,59 +105,7 @@ const INITIAL_PRODUCT_CATEGORIES = [
   { id: 4, name: "Automation Components", slug: "automation-components" }
 ];
 
-const INITIAL_SOLUTION_CATEGORIES = [
-  { id: 1, name: "Factory Automation", slug: "factory-automation" },
-  { id: 2, name: "Power Distribution", slug: "power-distribution" },
-  { id: 3, name: "Cloud Telemetry", slug: "cloud-telemetry" },
-  { id: 4, name: "SPM Engineering", slug: "spm-engineering" }
-];
 
-const INITIAL_SOLUTIONS = [
-  {
-    id: 1,
-    name: "Factory Automation & PLC Programming",
-    slug: "factory-automation-plc",
-    category_id: 1,
-    category_name: "Factory Automation",
-    description: "End-to-end Siemens and Allen-Bradley PLC, HMI, SCADA programming, and motion control integration for automated manufacturing lines.",
-    status: "Publish",
-    image_path: "uploads/images/S-001.jpg",
-    sort_order: 10
-  },
-  {
-    id: 2,
-    name: "Turnkey Power Distribution & PCC Panels",
-    slug: "power-distribution-pcc",
-    category_id: 2,
-    category_name: "Power Distribution",
-    description: "Design, CPRI testing, fabrication, and site erection of PCC, MCC, and main LT power distribution boards for industrial plants.",
-    status: "Publish",
-    image_path: "uploads/images/S-002.jpg",
-    sort_order: 20
-  },
-  {
-    id: 3,
-    name: "Cloud Telemetry & IIoT Edge Dashboards",
-    slug: "cloud-telemetry-iiot",
-    category_id: 3,
-    category_name: "Cloud Telemetry",
-    description: "Modbus/Ethernet edge gateway installation, protocol conversion, and real-time remote cloud dashboards for OEE and predictive maintenance.",
-    status: "Publish",
-    image_path: "uploads/images/S-008.jpg",
-    sort_order: 30
-  },
-  {
-    id: 4,
-    name: "Special Purpose Machine (SPM) Engineering",
-    slug: "spm-engineering-solutions",
-    category_id: 4,
-    category_name: "SPM Engineering",
-    description: "Custom SPM design, pneumatic workbenches, automated testing rigs, and material handling solutions tailored to factory production goals.",
-    status: "Publish",
-    image_path: "uploads/images/S-005.png",
-    sort_order: 40
-  }
-];
 
 export default function useAdminState() {
 
@@ -218,8 +166,6 @@ export default function useAdminState() {
     }
     return INITIAL_CLIENTS;
   });
-  const [solutions, setSolutions] = useState(() => getInitialCache('solutions', INITIAL_SOLUTIONS));
-  const [solutionCategories, setSolutionCategories] = useState(() => getInitialCache('solution_categories', INITIAL_SOLUTION_CATEGORIES));
   const [mediaAssets, setMediaAssets] = useState([]);
 
 
@@ -234,17 +180,6 @@ export default function useAdminState() {
   const [editingIndustry, setEditingIndustry] = useState(null);
   const [editingClient, setEditingClient] = useState(null);
   const [editingBlog, setEditingBlog] = useState(null);
-  const [editingSolution, setEditingSolution] = useState(null);
-  const [editingSolutionCategory, setEditingSolutionCategory] = useState(null);
-
-  // Form Input Bindings
-  const [solutionForm, setSolutionForm] = useState({
-    category_id: '', name: '', slug: '', description: '', icon: '', service_descriptions: '', sort_order: 0, status: 'Publish', industry_ids: [], product_ids: []
-  });
-  const [solutionCategoryForm, setSolutionCategoryForm] = useState({
-    name: '', sort_order: 0
-  });
-  const [solutionImage, setSolutionImage] = useState(null);
   const [serviceForm, setServiceForm] = useState({
     title: '', slug: '', short_description: '', detailed_description: '', features: '', sort_order: 0, status: 'Publish'
   });
@@ -389,18 +324,39 @@ export default function useAdminState() {
       if (data.metrics) { setMetrics(data.metrics); return; }
     } catch (_) { /* backend offline — try Supabase counts */ }
 
-    // Supabase fallback: count each table individually
+    // Supabase fallback: count each table individually including visitor_logs
     try {
       const count = async (table) => {
         const { count: c, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
         return error ? 0 : c;
       };
-      const [eq, ap, pr, cat, bl, sv, ind, cl] = await Promise.all([
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const [eq, ap, pr, cat, bl, sv, ind, cl, totVis] = await Promise.all([
         count('enquiries'), count('career_applications'), count('products'),
         count('product_categories'), count('blogs'), count('services'),
-        count('industries'), count('clients')
+        count('industries'), count('clients'), count('visitor_logs')
       ]);
-      setMetrics({ enquiries: eq, applications: ap, products: pr, categories: cat, blogs: bl, services: sv, industries: ind, clients: cl, totalVisitors: 0, todayVisitors: 0 });
+
+      const { count: todVis } = await supabase
+        .from('visitor_logs')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayStart.toISOString());
+
+      setMetrics({
+        enquiries: eq,
+        applications: ap,
+        products: pr,
+        categories: cat,
+        blogs: bl,
+        services: sv,
+        industries: ind,
+        clients: cl,
+        totalVisitors: totVis || 0,
+        todayVisitors: todVis || 0
+      });
     } catch (_) { /* retain default zeros */ }
   };
 
@@ -536,41 +492,7 @@ export default function useAdminState() {
     try { localStorage.setItem('cms_cache_clients', JSON.stringify(sorted)); } catch (_) {}
   }, 'sort_order');
 
-  // Fetch solutions and solution categories
-  const fetchSolutions = async () => {
-    let cats = solutionCategories;
-    await fetchWithFallback('/solutions/categories', 'solution_categories', (data) => {
-      cats = data;
-      setSolutionCategories(data);
-    });
-    await fetchWithFallback('/solutions', 'solutions', (data) => {
-      let localCache = [];
-      try {
-        const cachedStr = localStorage.getItem('cms_cache_solutions');
-        if (cachedStr) {
-          const parsed = JSON.parse(cachedStr);
-          if (Array.isArray(parsed)) localCache = parsed;
-        }
-      } catch (_) {}
 
-      const map = new Map();
-      INITIAL_SOLUTIONS.forEach(s => map.set(String(s.id), s));
-      (Array.isArray(data) ? data : []).forEach(s => map.set(String(s.id), s));
-      localCache.forEach(s => map.set(String(s.id), s));
-
-      const enriched = Array.from(map.values()).map(s => {
-        const cat = cats.find(c => String(c.id) === String(s.category_id) || c.name === s.category_id || c.slug === s.category_id);
-        return {
-          ...s,
-          category_name: s.category_name || (cat ? cat.name : (s.category_id ? String(s.category_id) : '')),
-          image_path: s.image_path || null
-        };
-      });
-      const sorted = enriched.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
-      setSolutions(sorted);
-      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(sorted)); } catch (_) {}
-    });
-  };
 
 
 
@@ -591,12 +513,58 @@ export default function useAdminState() {
 
   // Fetch enquiries, career applications, and visitor analytics
   const fetchVisitorStats = async () => {
-    // Visitor breakdown (page views, devices, browsers)
+    // Visitor breakdown (page views, devices, browsers, countries)
+    let fetchedBreakdown = false;
     try {
       const res = await adminFetch(`${API_BASE_URL}/admin/analytics/visitors`, { headers: apiHeaders() });
-      const data = await res.json();
-      if (data.breakdown) setVisitorBreakdown(data.breakdown);
-    } catch (_) { /* no visitor data */ }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.breakdown) {
+          setVisitorBreakdown(data.breakdown);
+          fetchedBreakdown = true;
+        }
+      }
+    } catch (_) { /* Express API offline */ }
+
+    // Supabase Fallback for Visitor Analytics Breakdown
+    if (!fetchedBreakdown) {
+      try {
+        const { data: logs, error } = await supabase
+          .from('visitor_logs')
+          .select('device, browser, country, url');
+
+        if (!error && Array.isArray(logs) && logs.length > 0) {
+          const deviceMap = {};
+          const countryMap = {};
+          const browserMap = {};
+          const pageMap = {};
+
+          logs.forEach(item => {
+            const dev = item.device || 'Desktop';
+            deviceMap[dev] = (deviceMap[dev] || 0) + 1;
+
+            const cty = item.country || 'India';
+            countryMap[cty] = (countryMap[cty] || 0) + 1;
+
+            const brw = item.browser || 'Unknown';
+            browserMap[brw] = (browserMap[brw] || 0) + 1;
+
+            const pg = item.url || '/';
+            pageMap[pg] = (pageMap[pg] || 0) + 1;
+          });
+
+          const devices = Object.entries(deviceMap).map(([device, count]) => ({ device, count }));
+          const countries = Object.entries(countryMap).map(([country, count]) => ({ country, count }));
+          const browsers = Object.entries(browserMap).map(([browser, count]) => ({ browser, count }));
+          const popularPages = Object.entries(pageMap)
+            .map(([url, count]) => ({ url, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+          setVisitorBreakdown({ devices, countries, browsers, popularPages });
+        }
+      } catch (_) {}
+    }
 
     // Enquiries list
     try {
@@ -633,7 +601,6 @@ export default function useAdminState() {
       fetchServices();
       fetchIndustries();
       fetchClients();
-      fetchSolutions();
       fetchMedia();
       fetchVisitorStats();
     }
@@ -869,220 +836,7 @@ export default function useAdminState() {
   };
 
 
-  // Solutions CRUD handlers
-  const saveSolution = async (e) => {
-    e.preventDefault();
-    const isNew = editingSolution === 'new';
-    const method = isNew ? 'POST' : 'PUT';
-    const url = isNew
-      ? `${API_BASE_URL}/admin/solutions`
-      : `${API_BASE_URL}/admin/solutions/${editingSolution.id}`;
 
-    let uploadedImgPath = editingSolution?.image_path || null;
-    if (solutionImage) {
-      const imgUrl = await uploadImageToSupabase(solutionImage, 'solutions');
-      if (imgUrl) uploadedImgPath = imgUrl;
-    }
-
-    const catName = solutionCategories.find(c => String(c.id) === String(solutionForm.category_id))?.name || '';
-    const catIdNum = Number(solutionForm.category_id);
-    const validCatId = solutionForm.category_id
-      ? (!isNaN(catIdNum) ? catIdNum : solutionForm.category_id)
-      : null;
-
-    const formData = new FormData();
-    formData.append('category_id', validCatId || '');
-    formData.append('name', solutionForm.name);
-    formData.append('slug', solutionForm.slug);
-    formData.append('description', solutionForm.description || '');
-    formData.append('icon', solutionForm.icon || '');
-    formData.append('service_descriptions', solutionForm.service_descriptions || '');
-    formData.append('sort_order', solutionForm.sort_order || 0);
-    formData.append('status', solutionForm.status || 'Publish');
-    formData.append('industry_ids', JSON.stringify(solutionForm.industry_ids || []));
-    formData.append('product_ids', JSON.stringify(solutionForm.product_ids || []));
-    if (solutionImage) formData.append('image', solutionImage);
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Authorization': `Bearer ${token || sessionStorage.getItem('admin_token')}` },
-        body: formData
-      });
-      if (res.ok) {
-        toast.success("Solution saved successfully");
-        setEditingSolution(null);
-        setSolutionImage(null);
-        fetchSolutions();
-        return;
-      }
-    } catch (_) {}
-
-    // Supabase Cloud DB fallback
-    let supaSaved = false;
-    try {
-      const payload = {
-        category_id: validCatId,
-        name: solutionForm.name,
-        slug: solutionForm.slug || solutionForm.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        description: solutionForm.description || '',
-        icon: solutionForm.icon || '',
-        service_descriptions: solutionForm.service_descriptions || '',
-        sort_order: Number(solutionForm.sort_order) || 0,
-        status: solutionForm.status || 'Publish',
-        ...(uploadedImgPath ? { image_path: uploadedImgPath } : {})
-      };
-
-
-      let supaRes;
-      if (isNew) {
-        supaRes = await supabase.from('solutions').insert([payload]);
-      } else {
-        supaRes = await supabase.from('solutions').update(payload).eq('id', editingSolution.id);
-      }
-
-
-      if (!supaRes.error) {
-        toast.success("✅ Solution saved to Cloud Database!");
-        setEditingSolution(null);
-        setSolutionImage(null);
-        fetchSolutions();
-        return;
-      }
-    } catch (err) {
-      console.warn("Supabase solution save error:", err);
-    }
-
-
-    const newSol = {
-      id: isNew ? Date.now() : editingSolution.id,
-      ...solutionForm,
-      category_id: validCatId,
-      category_name: catName,
-      image_path: uploadedImgPath
-    };
-    setSolutions(prev => {
-      const updated = isNew
-        ? [newSol, ...prev]
-        : prev.map(s => s.id === editingSolution.id ? newSol : s);
-      try { localStorage.setItem('cms_cache_solutions', JSON.stringify(updated)); } catch (_) {}
-      return updated;
-    });
-
-    toast.success(supaSaved ? "✅ Solution saved to Cloud Database!" : "Solution saved successfully");
-    setEditingSolution(null);
-    setSolutionImage(null);
-  };
-
-
-  const deleteSolutionItem = async (id) => {
-    if (window.confirm("Delete this solution?")) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/admin/solutions/${id}`, {
-          method: 'DELETE',
-          headers: apiHeaders()
-        });
-        if (res.ok) {
-          toast.info("Solution deleted");
-          fetchSolutions();
-          return;
-        }
-      } catch (_) {}
-
-      try {
-        const { error } = await supabase.from('solutions').delete().eq('id', id);
-        if (!error) {
-          toast.info("Solution deleted from Cloud Database");
-          fetchSolutions();
-          return;
-        }
-      } catch (_) {}
-
-      setSolutions(prev => prev.filter(s => s.id !== id));
-      toast.info("Solution deleted locally");
-    }
-  };
-
-  // Solution Categories CRUD handlers
-  const saveSolutionCategory = async (e) => {
-    e.preventDefault();
-    const isNew = editingSolutionCategory === 'new';
-    const method = isNew ? 'POST' : 'PUT';
-    const url = isNew
-      ? `${API_BASE_URL}/admin/solutions/categories`
-      : `${API_BASE_URL}/admin/solutions/categories/${editingSolutionCategory.id}`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: apiHeaders(),
-        body: JSON.stringify(solutionCategoryForm)
-      });
-      if (res.ok) {
-        toast.success("Solution category saved");
-        setEditingSolutionCategory(null);
-        fetchSolutions();
-        return;
-      }
-    } catch (_) { /* API offline */ }
-
-    // Supabase Cloud DB fallback
-    try {
-      const slug = solutionCategoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const payload = { name: solutionCategoryForm.name, slug, sort_order: Number(solutionCategoryForm.sort_order) || 0 };
-      let supaRes;
-      if (isNew) {
-        supaRes = await supabase.from('solution_categories').insert([payload]);
-      } else {
-        supaRes = await supabase.from('solution_categories').update(payload).eq('id', editingSolutionCategory.id);
-      }
-      if (!supaRes.error) {
-        toast.success("✅ Solution category saved to Cloud Database!");
-        setEditingSolutionCategory(null);
-        fetchSolutions();
-        return;
-      }
-    } catch (_) {}
-
-    // Offline fallback: update local state directly
-    const slug = solutionCategoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    if (isNew) {
-      const newCat = { id: Date.now(), ...solutionCategoryForm, slug };
-      setSolutionCategories(prev => [...prev, newCat]);
-    } else {
-      setSolutionCategories(prev => prev.map(c => c.id === editingSolutionCategory.id ? { ...c, ...solutionCategoryForm, slug } : c));
-    }
-    toast.success("Category saved locally");
-    setEditingSolutionCategory(null);
-  };
-
-  const deleteSolutionCategoryItem = async (id) => {
-    if (window.confirm("Delete this solution category?")) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/admin/solutions/categories/${id}`, {
-          method: 'DELETE',
-          headers: apiHeaders()
-        });
-        if (res.ok) {
-          toast.info("Category deleted");
-          fetchSolutions();
-          return;
-        }
-      } catch (_) {}
-
-      try {
-        const { error } = await supabase.from('solution_categories').delete().eq('id', id);
-        if (!error) {
-          toast.info("Category deleted from Cloud Database");
-          fetchSolutions();
-          return;
-        }
-      } catch (_) {}
-
-      setSolutionCategories(prev => prev.filter(c => c.id !== id));
-      toast.info("Category deleted locally");
-    }
-  };
 
   // ─── UTILITY STORAGE UPLOADER ──────────────────────────────────────────────
   const fileToDataURL = (file) => {
@@ -2052,8 +1806,6 @@ export default function useAdminState() {
     services,
     industries,
     clients,
-    solutions,
-    solutionCategories,
     mediaAssets,
     viewItem, setViewItem,
     editingService, setEditingService,
@@ -2062,11 +1814,6 @@ export default function useAdminState() {
     editingIndustry, setEditingIndustry,
     editingClient, setEditingClient,
     editingBlog, setEditingBlog,
-    editingSolution, setEditingSolution,
-    editingSolutionCategory, setEditingSolutionCategory,
-    solutionForm, setSolutionForm,
-    solutionCategoryForm, setSolutionCategoryForm,
-    setSolutionImage,
     serviceForm, setServiceForm,
     setServiceImage,
     setServiceBrochure,
@@ -2086,10 +1833,6 @@ export default function useAdminState() {
     changeEnquiryStatus,
     changeCareerStatus,
     saveSettings,
-    saveSolution,
-    deleteSolutionItem,
-    saveSolutionCategory,
-    deleteSolutionCategoryItem,
     saveService,
     deleteServiceItem,
     saveProduct,

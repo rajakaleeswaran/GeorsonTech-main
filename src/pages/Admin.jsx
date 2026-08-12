@@ -27,7 +27,6 @@ import ProductsTab from '../components/Admin/ProductsTab';
 import IndustriesTab from '../components/Admin/IndustriesTab';
 import ClientsTab from '../components/Admin/ClientsTab';
 import BlogsTab from '../components/Admin/BlogsTab';
-import SolutionsTab from '../components/Admin/SolutionsTab';
 import EnquiriesTab from '../components/Admin/EnquiriesTab';
 import CareersTab from '../components/Admin/CareersTab';
 import SettingsTab from '../components/Admin/SettingsTab';
@@ -112,14 +111,6 @@ function Admin() {
 
               <button className={`admin-nav-item ${admin.activeTab === 'blogs' ? 'active' : ''}`} onClick={() => admin.setActiveTab('blogs')}>
                 <FaRss /> Blogs articles
-              </button>
-
-              <button className={`admin-nav-item ${admin.activeTab === 'solutions' ? 'active' : ''}`} onClick={() => admin.setActiveTab('solutions')}>
-                <FaCogs /> Solutions Ecosystem
-              </button>
-
-              <button className={`admin-nav-item ${admin.activeTab === 'solution_categories' ? 'active' : ''}`} onClick={() => admin.setActiveTab('solution_categories')}>
-                <FaCogs /> Solution Categories
               </button>
 
               <button className={`admin-nav-item ${admin.activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => admin.setActiveTab('enquiries')}>
@@ -239,28 +230,7 @@ function Admin() {
                 />
               )}
 
-              {(admin.activeTab === 'solutions' || admin.activeTab === 'solution_categories') && (
-                <SolutionsTab
-                  activeTab={admin.activeTab}
-                  solutions={admin.solutions}
-                  solutionCategories={admin.solutionCategories}
-                  industries={admin.industries}
-                  products={admin.products}
-                  editingSolution={admin.editingSolution}
-                  setEditingSolution={admin.setEditingSolution}
-                  editingSolutionCategory={admin.editingSolutionCategory}
-                  setEditingSolutionCategory={admin.setEditingSolutionCategory}
-                  solutionForm={admin.solutionForm}
-                  setSolutionForm={admin.setSolutionForm}
-                  solutionCategoryForm={admin.solutionCategoryForm}
-                  setSolutionCategoryForm={admin.setSolutionCategoryForm}
-                  setSolutionImage={admin.setSolutionImage}
-                  saveSolution={admin.saveSolution}
-                  deleteSolutionItem={admin.deleteSolutionItem}
-                  saveSolutionCategory={admin.saveSolutionCategory}
-                  deleteSolutionCategoryItem={admin.deleteSolutionCategoryItem}
-                />
-              )}
+
 
               {admin.activeTab === 'enquiries' && (
                 <EnquiriesTab

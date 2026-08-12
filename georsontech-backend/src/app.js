@@ -159,55 +159,69 @@ adminRouter.use(authenticateToken);
 
 // Dashboard: aggregate metrics from all collections
 adminRouter.get('/dashboard', async (req, res) => {
+  const safeCount = async (sql) => {
+    try {
+      const [[row]] = await pool.query(sql);
+      return row ? (row.count || 0) : 0;
+    } catch (_) {
+      return 0;
+    }
+  };
+
+  const safeList = async (sql) => {
+    try {
+      const [rows] = await pool.query(sql);
+      return rows || [];
+    } catch (_) {
+      return [];
+    }
+  };
+
   try {
-    // Run all count queries in parallel for performance
     const [
-      [[enquiriesCount]], [[careersCount]], [[productsCount]],
-      [[categoriesCount]], [[blogsCount]], [[servicesCount]],
-      [[industriesCount]], [[clientsCount]], [[solutionsCount]],
-      [[visitorsCount]], [[todayVisitorsCount]],
-      [recentEnquiries], [recentCareers]
+      enquiriesCount, careersCount, productsCount,
+      categoriesCount, blogsCount, servicesCount,
+      industriesCount, clientsCount,
+      visitorsCount, todayVisitorsCount,
+      recentEnquiries, recentCareers
     ] = await Promise.all([
-      pool.query('SELECT COUNT(*) as count FROM enquiries'),
-      pool.query('SELECT COUNT(*) as count FROM career_applications'),
-      pool.query('SELECT COUNT(*) as count FROM products'),
-      pool.query('SELECT COUNT(*) as count FROM product_categories'),
-      pool.query('SELECT COUNT(*) as count FROM blogs'),
-      pool.query('SELECT COUNT(*) as count FROM services'),
-      pool.query('SELECT COUNT(*) as count FROM industries'),
-      pool.query('SELECT COUNT(*) as count FROM clients'),
-      pool.query('SELECT COUNT(*) as count FROM solutions'),
-      pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs'),
-      pool.query('SELECT COUNT(DISTINCT ip_address) as count FROM visitor_logs WHERE DATE(created_at) = CURDATE()'),
-      pool.query('SELECT name, subject, status, created_at FROM enquiries ORDER BY created_at DESC LIMIT 5'),
-      pool.query('SELECT name, qualification, status, created_at FROM career_applications ORDER BY created_at DESC LIMIT 5')
+      safeCount('SELECT COUNT(*) as count FROM enquiries'),
+      safeCount('SELECT COUNT(*) as count FROM career_applications'),
+      safeCount('SELECT COUNT(*) as count FROM products'),
+      safeCount('SELECT COUNT(*) as count FROM product_categories'),
+      safeCount('SELECT COUNT(*) as count FROM blogs'),
+      safeCount('SELECT COUNT(*) as count FROM services'),
+      safeCount('SELECT COUNT(*) as count FROM industries'),
+      safeCount('SELECT COUNT(*) as count FROM clients'),
+      safeCount('SELECT COUNT(*) as count FROM visitor_logs'),
+      safeCount('SELECT COUNT(*) as count FROM visitor_logs WHERE DATE(created_at) = CURDATE()'),
+      safeList('SELECT name, subject, status, created_at FROM enquiries ORDER BY created_at DESC LIMIT 5'),
+      safeList('SELECT name, qualification, status, created_at FROM career_applications ORDER BY created_at DESC LIMIT 5')
     ]);
 
     return res.json({
       metrics: {
-        enquiries: enquiriesCount.count,
-        applications: careersCount.count,
-        products: productsCount.count,
-        categories: categoriesCount.count,
-        blogs: blogsCount.count,
-        services: servicesCount.count,
-        industries: industriesCount.count,
-        clients: clientsCount.count,
-        solutions: solutionsCount.count,
-        totalVisitors: visitorsCount.count,
-        todayVisitors: todayVisitorsCount.count
+        enquiries: enquiriesCount,
+        applications: careersCount,
+        products: productsCount,
+        categories: categoriesCount,
+        blogs: blogsCount,
+        services: servicesCount,
+        industries: industriesCount,
+        clients: clientsCount,
+        totalVisitors: visitorsCount,
+        todayVisitors: todayVisitorsCount
       },
       recentEnquiries,
       recentCareers
     });
   } catch (error) {
     console.error('[dashboard] MySQL offline or query failed:', error.message);
-    // Return empty metrics instead of 500 so the frontend dashboard still renders
     return res.json({
       metrics: {
         enquiries: 0, applications: 0, products: 0, categories: 0,
         blogs: 0, services: 0, industries: 0, clients: 0,
-        solutions: 0, totalVisitors: 0, todayVisitors: 0
+        totalVisitors: 0, todayVisitors: 0
       },
       recentEnquiries: [],
       recentCareers: []

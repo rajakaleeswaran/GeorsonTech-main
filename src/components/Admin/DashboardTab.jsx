@@ -97,24 +97,32 @@ function DashboardTab({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
         <div className="enquiry-info-card">
           <h4 style={{ margin: '0 0 16px', fontSize: '15px' }}>Visitor Device Types</h4>
-          <ul>
-            {(visitorBreakdown?.devices || []).map((d, i) => (
-              <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{d.device}</span> <strong>{d.count} views</strong>
-              </li>
-            ))}
-          </ul>
+          {(visitorBreakdown?.devices || []).length > 0 ? (
+            <ul>
+              {(visitorBreakdown?.devices || []).map((d, i) => (
+                <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{d.device}</span> <strong>{d.count} views</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '10px 0' }}>No visitor device logs recorded yet.</p>
+          )}
         </div>
 
         <div className="enquiry-info-card">
           <h4 style={{ margin: '0 0 16px', fontSize: '15px' }}>Country Locations</h4>
-          <ul>
-            {(visitorBreakdown?.countries || []).map((c, i) => (
-              <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{c.country}</span> <strong>{c.count} logs</strong>
-              </li>
-            ))}
-          </ul>
+          {(visitorBreakdown?.countries || []).length > 0 ? (
+            <ul>
+              {(visitorBreakdown?.countries || []).map((c, i) => (
+                <li key={i} style={{ padding: '8px 0', fontSize: '13.5px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{c.country}</span> <strong>{c.count} logs</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '10px 0' }}>No country logs recorded yet.</p>
+          )}
         </div>
       </div>
     </div>
